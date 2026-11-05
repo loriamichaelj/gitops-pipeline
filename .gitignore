@@ -1,0 +1,95 @@
+# Shared ignore rules: committed, applies to every clone.
+# Machine/personal-only patterns belong in .git/info/exclude instead.
+
+# --- Private docs -----------------------------------------------------------
+docs/
+
+# --- Secrets & credentials (never commit) -----------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.csr
+id_rsa*
+id_ed25519*
+*.ppk
+.netrc
+.npmrc
+.pypirc
+secrets.*
+*secret*.yaml
+*secret*.yml
+*secret*.json
+!*sealed*secret*.yaml
+!*sealed*secret*.yml
+!*external*secret*.yaml
+!*external*secret*.yml
+*.decrypted.*
+*.dec.yaml
+*.dec.yml
+credentials
+credentials.json
+*.tfvars.json
+.vault-token
+
+# --- Cloud provider credentials ---------------------------------------------
+.aws/
+.azure/
+.gcloud/
+*service-account*.json
+*sa-key*.json
+application_default_credentials.json
+.oci/
+
+# --- Kubernetes -------------------------------------------------------------
+kubeconfig
+kubeconfig*
+*.kubeconfig
+.kube/
+talosconfig
+*.talosconfig
+
+# --- Terraform / OpenTofu ---------------------------------------------------
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+.terragrunt-cache/
+
+# --- Pulumi / Ansible -------------------------------------------------------
+Pulumi.*.yaml
+!Pulumi.yaml
+*.retry
+.vault_pass*
+vault-password*
+
+# --- Helm / Kustomize build output ------------------------------------------
+charts/*.tgz
+**/charts/*.tgz
+rendered/
+.helm/
+
+# --- Build & tool output ----------------------------------------------------
+dist/
+build/
+out/
+tmp/
+*.log
+gitleaks-report.*

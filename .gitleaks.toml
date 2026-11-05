@@ -1,0 +1,23 @@
+title = "gitops-pipeline secret scanning"
+
+# Start from gitleaks' built-in ruleset (cloud keys, tokens, private keys, ...).
+[extend]
+useDefault = true
+
+# Plaintext Kubernetes Secret manifests. Use SOPS or SealedSecrets instead.
+[[rules]]
+id = "k8s-plaintext-secret"
+description = "Kubernetes Secret with inline data/stringData"
+regex = '''(?s)kind:\s*Secret\b.*?\n(?:data|stringData):\s*\n\s+[A-Za-z0-9_.-]+:\s*\S+'''
+paths = ['''\.ya?ml$''']
+keywords = ["kind: secret"]
+
+[allowlist]
+description = "Encrypted material and examples"
+paths = [
+  '''(^|/)\.gitleaks\.toml$''',
+  '''\.example$''',
+  '''(^|/)[^/]*sealed[^/]*secret[^/]*\.ya?ml$''',
+]
+# SOPS-encrypted values are safe to commit.
+regexes = ['''ENC\[AES256_GCM,data:''']

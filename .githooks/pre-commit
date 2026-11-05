@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Block commits that contain secrets in staged changes.
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not installed (brew install gitleaks). Commit blocked." >&2
+  exit 1
+fi
+
+gitleaks git --pre-commit --staged --redact --no-banner -v --config .gitleaks.toml
