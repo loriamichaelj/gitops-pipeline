@@ -1,0 +1,35 @@
+{{- /* Wave -5: Crossplane core. */ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  sources:
+    - repoURL: {{ .Values.crossplane.chartRepo }}
+      chart: crossplane
+      targetRevision: {{ .Values.crossplane.chartVersion }}
+      helm:
+        releaseName: crossplane
+        valueFiles:
+          - $values/platform/crossplane/install/values.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.inClusterServer }}
+    namespace: {{ .Values.crossplane.namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      {{- toYaml .Values.retry | nindent 6 }}

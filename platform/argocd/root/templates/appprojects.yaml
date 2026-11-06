@@ -1,0 +1,56 @@
+{{- /* Wave -10: projects exist before any Application references them. */ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Hub control plane (Argo CD, Crossplane, providers, platform APIs).
+  sourceRepos:
+    - {{ .Values.repoURL }}
+    - {{ .Values.argocd.chartRepo }}
+    - {{ .Values.crossplane.chartRepo }}
+  destinations:
+    - server: {{ .Values.inClusterServer }}
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+{{- range .Values.environments }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: infra-{{ . }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Infrastructure claims (platform XRs) for {{ . }}. Namespaced only.
+  sourceRepos:
+    - {{ $.Values.repoURL }}
+  destinations:
+    - server: {{ $.Values.inClusterServer }}
+      namespace: infra-{{ . }}
+  clusterResourceWhitelist: []
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps-{{ . }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  description: Application workloads for {{ . }} on spoke clusters.
+  sourceRepos:
+    - {{ $.Values.repoURL }}
+  destinations:
+    - server: "*"
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+{{- end }}

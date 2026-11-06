@@ -1,0 +1,14 @@
+{{- /*
+Default config for namespaced (*.gcp.m.upbound.io) managed resources. Credentials
+come from each provider pod's environment (see runtimeconfigs.yaml).
+*/ -}}
+apiVersion: gcp.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  projectID: {{ include "gcp.required" (dict "name" "projectID" "value" .Values.projectID) }}
+  credentials:
+    source: InjectedIdentity

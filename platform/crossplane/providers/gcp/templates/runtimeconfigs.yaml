@@ -1,0 +1,71 @@
+{{- /*
+Federated identity without Secrets:
+  - the provider pod runs as a fixed service account, provider-gcp-<family>,
+  - a projected token for that account (audience = WIF provider's allowed audience)
+    is exchanged by Google's STS,
+  - GOOGLE_APPLICATION_CREDENTIALS points at a non-secret external_account config
+    that impersonates the family's GCP service account.
+The ClusterProviderConfig uses InjectedIdentity, so the provider uses these
+Application Default Credentials.
+*/ -}}
+{{- $wifProvider := include "gcp.required" (dict "name" "wifProvider" "value" .Values.wifProvider) }}
+{{- range $family, $cfg := .Values.families }}
+{{- $name := printf "provider-gcp-%s" $family }}
+{{- $gsa := include "gcp.required" (dict "name" (printf "families.%s.serviceAccount" $family) "value" $cfg.serviceAccount) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-credentials
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  credentials.json: |
+    {{- dict
+        "type" "external_account"
+        "audience" (printf "//iam.googleapis.com/%s" $wifProvider)
+        "subject_token_type" "urn:ietf:params:oauth:token-type:jwt"
+        "token_url" "https://sts.googleapis.com/v1/token"
+        "service_account_impersonation_url" (printf "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken" $gsa)
+        "credential_source" (dict "file" "/var/run/secrets/gcp/token" "format" (dict "type" "text"))
+        | toPrettyJson | nindent 4 }}
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: {{ $name }}
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              env:
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: /var/run/gcp/credentials.json
+              volumeMounts:
+                - name: gcp-token
+                  mountPath: /var/run/secrets/gcp
+                  readOnly: true
+                - name: gcp-credentials
+                  mountPath: /var/run/gcp
+                  readOnly: true
+          volumes:
+            - name: gcp-token
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      audience: {{ $.Values.audience }}
+                      path: token
+                      expirationSeconds: 3600
+            - name: gcp-credentials
+              configMap:
+                name: {{ $name }}-credentials
+{{- end }}

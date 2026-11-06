@@ -1,0 +1,5 @@
+apiVersion: v2
+name: root
+description: App-of-apps entry point for the hub. Renders AppProjects, platform Applications and ApplicationSets.
+type: application
+version: 0.1.0

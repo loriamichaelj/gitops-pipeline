@@ -1,0 +1,5 @@
+apiVersion: v2
+name: crossplane-providers-gcp
+description: GCP provider family, per-family runtime configs with federated identity, and the default ClusterProviderConfig.
+type: application
+version: 0.1.0
