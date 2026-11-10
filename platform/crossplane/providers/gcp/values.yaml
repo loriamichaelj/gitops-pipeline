@@ -16,3 +16,5 @@ audience: gitops-pipeline-hub
 families:
   storage:
     serviceAccount: ""
+  compute:
+    serviceAccount: ""

@@ -9,6 +9,10 @@ locals {
       gsa_id = "xp-gcp-storage-${var.env}"
       roles  = ["roles/storage.admin"]
     }
+    "provider-gcp-compute" = {
+      gsa_id = "xp-gcp-compute-${var.env}"
+      roles  = ["roles/compute.networkAdmin"]
+    }
   }
 
   fact_prefix = "gcp.gitops-pipeline"

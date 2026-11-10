@@ -39,6 +39,8 @@ spec:
             families:
               storage:
                 serviceAccount: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/sa.provider-gcp-storage" }}'`}}
+              compute:
+                serviceAccount: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/sa.provider-gcp-compute" }}'`}}
       destination:
         server: {{`'{{ .server }}'`}}
         namespace: {{ .Values.crossplane.namespace }}

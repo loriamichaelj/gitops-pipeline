@@ -5,6 +5,7 @@ locals {
     "iamcredentials.googleapis.com",
     "sts.googleapis.com",
     "storage.googleapis.com",
+    "compute.googleapis.com",
   ]
 
   role_bindings = merge([

@@ -1,0 +1,18 @@
+# Network for clusters: pod and service ranges, kept on XR deletion; dots in the
+# name are sanitised.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: spokes.europe
+  namespace: infra-prod
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    region: europe-west1
+    cidr: 10.8.0.0/20
+    podsCidr: 10.64.0.0/14
+    servicesCidr: 10.68.0.0/20
+    deletionPolicy: Orphan

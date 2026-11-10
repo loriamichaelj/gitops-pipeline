@@ -1,0 +1,75 @@
+# XNetwork: a private network with one regional subnet. Each cloud has its own
+# Composition, selected by the XR's compositionSelector label `cloud`.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xnetworks.platform.gitops-pipeline.io
+  annotations:
+    # Deleting an XRD deletes every XR of its type (and their cloud resources).
+    # Removal must be a deliberate manual step, never an Argo CD prune.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  scope: Namespaced
+  group: platform.gitops-pipeline.io
+  names:
+    kind: XNetwork
+    plural: xnetworks
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  default: {}
+                  properties:
+                    region:
+                      description: Cloud region of the subnet (e.g. us-central1).
+                      type: string
+                      pattern: "^[a-z]+-[a-z]+[0-9]+$"
+                      default: us-central1
+                    cidr:
+                      description: IPv4 range of the subnet.
+                      type: string
+                      pattern: "^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$"
+                      default: 10.0.0.0/20
+                    podsCidr:
+                      description: Secondary range for cluster pods. Set together with servicesCidr.
+                      type: string
+                      pattern: "^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$"
+                    servicesCidr:
+                      description: Secondary range for cluster services. Set together with podsCidr.
+                      type: string
+                      pattern: "^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$"
+                    deletionPolicy:
+                      description: Orphan keeps the cloud network when the XR is deleted.
+                      type: string
+                      enum: [Delete, Orphan]
+                      default: Delete
+                  x-kubernetes-validations:
+                    # has() because the API server checks the schema default ({}) against
+                    # this rule before any field default is applied.
+                    - rule: "has(self.podsCidr) == has(self.servicesCidr)"
+                      message: podsCidr and servicesCidr must be set together
+            status:
+              type: object
+              properties:
+                networkName:
+                  description: Name of the network in the cloud.
+                  type: string
+                subnetName:
+                  description: Name of the subnet in the cloud.
+                  type: string
+      additionalPrinterColumns:
+        - name: NETWORK
+          type: string
+          jsonPath: .status.networkName
+        - name: SUBNET
+          type: string
+          jsonPath: .status.subnetName

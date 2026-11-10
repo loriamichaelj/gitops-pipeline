@@ -1,0 +1,14 @@
+# Sample dev network on GCP: a custom-mode VPC with one subnet. Free; no NAT or firewall rules.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    region: us-central1
+    cidr: 10.0.0.0/20
