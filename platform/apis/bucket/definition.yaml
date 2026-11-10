@@ -56,7 +56,9 @@ spec:
                       pattern: "^[a-z0-9_-]{1,63}$"
                       default: platform
                   x-kubernetes-validations:
-                    - rule: "!(self.forceDestroy && self.deletionPolicy == 'Orphan')"
+                    # has() guards the schema default ({}), which the API server checks
+                    # against this rule before any field default is applied.
+                    - rule: "!(has(self.forceDestroy) && has(self.deletionPolicy) && self.forceDestroy && self.deletionPolicy == 'Orphan')"
                       message: forceDestroy has no effect with deletionPolicy Orphan
             status:
               type: object
