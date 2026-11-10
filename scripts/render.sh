@@ -22,6 +22,18 @@ helm template crossplane-providers-gcp platform/crossplane/providers/gcp \
   --set families.compute.serviceAccount=xp-gcp-compute@example-project.iam.gserviceaccount.com \
   >"$out/crossplane-providers-gcp.yaml"
 
+# A family without an identity yet is skipped, so a hub can sync a new family before
+# bootstrap provisions its service account.
+partial=$(helm template crossplane-providers-gcp platform/crossplane/providers/gcp \
+  --namespace crossplane-system \
+  --set projectID=example-project \
+  --set wifProvider=projects/123456789012/locations/global/workloadIdentityPools/example/providers/example \
+  --set families.storage.serviceAccount=xp-gcp-storage@example-project.iam.gserviceaccount.com)
+if grep -q provider-gcp-compute <<<"$partial"; then
+  echo "render: a family without a service account must not be rendered" >&2
+  exit 1
+fi
+
 helm template argocd argo-cd \
   --repo "$(val .argocd.chartRepo)" --version "$(val .argocd.chartVersion)" \
   --namespace argocd -f platform/argocd/values.yaml >"$out/argocd.yaml"
