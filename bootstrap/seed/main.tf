@@ -36,11 +36,12 @@ locals {
       ]
     }
 
-    # Applies the dev environment's infrastructure. Roles are added with the
-    # stacks that need them; today it only has its own state prefix (below).
+    # Confirms the dev environment's infrastructure: reads buckets to check that the
+    # hub's changes arrived. Roles are added with the stacks that need them; it also
+    # has its own state prefix (below).
     dev = {
       account_id    = "gha-dev"
-      project_roles = []
+      project_roles = ["roles/storage.legacyBucketReader"]
     }
   }
 }
