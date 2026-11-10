@@ -41,7 +41,7 @@ locals {
     # has its own state prefix (below).
     dev = {
       account_id    = "gha-dev"
-      project_roles = ["roles/storage.legacyBucketReader"]
+      project_roles = ["roles/storage.bucketViewer"]
     }
   }
 }
