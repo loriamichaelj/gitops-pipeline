@@ -1,6 +1,12 @@
 provider "google" {
   # Uses the operator's Application Default Credentials (gcloud auth application-default login).
   project = var.gcp_project_id
+
+  # Every resource that supports labels carries these.
+  default_labels = {
+    repo       = "gitops-pipeline"
+    managed-by = "opentofu"
+  }
 }
 
 provider "helm" {

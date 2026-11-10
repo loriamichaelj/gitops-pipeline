@@ -70,6 +70,7 @@ spec:
                             "cloud" = "gcp"
                             "owner" = _params?.owner or "platform"
                             "managed-by" = "crossplane"
+                            "repo" = "gitops-pipeline"
                             "xr-namespace" = _ns
                             "xr-name" = _name.replace(".", "-")[:63]
                         }
