@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OpenTofu bootstrap: formatting, validation of every root module, and trivy.
+# OpenTofu bootstrap: formatting and validation of every root module.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -12,6 +12,3 @@ for root in bootstrap/*/; do
   tofu -chdir="$root" init -backend=false -input=false -lockfile=readonly >/dev/null
   tofu -chdir="$root" validate
 done
-
-echo "== trivy config"
-trivy config --quiet --exit-code 1 --severity HIGH,CRITICAL bootstrap

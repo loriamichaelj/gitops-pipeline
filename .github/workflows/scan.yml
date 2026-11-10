@@ -1,0 +1,42 @@
+name: scan
+
+# Static security scans over the whole repository. Both jobs are required checks on
+# dev. Weekly runs catch advisories published after a change merged.
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install trivy
+        run: .github/scripts/install-tools.sh trivy
+
+      - name: Misconfiguration scan
+        run: scripts/scan.sh trivy
+
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Policy scan
+        run: scripts/scan.sh checkov

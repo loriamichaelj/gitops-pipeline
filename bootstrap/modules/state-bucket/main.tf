@@ -1,4 +1,5 @@
 resource "google_storage_bucket" "state" {
+  # checkov:skip=CKV_GCP_62: Admin Activity audit logs already record changes to the bucket and its IAM. Usage logs would need a second bucket to hold them.
   project  = var.project_id
   name     = var.name
   location = var.location
