@@ -10,8 +10,10 @@ Application Default Credentials.
 */ -}}
 {{- $wifProvider := include "gcp.required" (dict "name" "wifProvider" "value" .Values.wifProvider) }}
 {{- range $family, $cfg := .Values.families }}
+{{- /* A family with no identity yet is skipped; see providers.yaml. */ -}}
+{{- if $cfg.serviceAccount }}
 {{- $name := printf "provider-gcp-%s" $family }}
-{{- $gsa := include "gcp.required" (dict "name" (printf "families.%s.serviceAccount" $family) "value" $cfg.serviceAccount) }}
+{{- $gsa := $cfg.serviceAccount }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -68,4 +70,5 @@ spec:
             - name: gcp-credentials
               configMap:
                 name: {{ $name }}-credentials
+{{- end }}
 {{- end }}

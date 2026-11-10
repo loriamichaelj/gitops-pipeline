@@ -11,6 +11,8 @@ metadata:
 spec:
   package: {{ .Values.registry }}/provider-family-gcp:{{ .Values.version }}
 {{- range $family, $cfg := .Values.families }}
+{{- /* A family with no identity yet is skipped, so a hub can sync a new family before bootstrap provisions its service account. */ -}}
+{{- if $cfg.serviceAccount }}
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
@@ -22,4 +24,5 @@ spec:
   package: {{ $.Values.registry }}/provider-gcp-{{ $family }}:{{ $.Values.version }}
   runtimeConfigRef:
     name: provider-gcp-{{ $family }}
+{{- end }}
 {{- end }}
