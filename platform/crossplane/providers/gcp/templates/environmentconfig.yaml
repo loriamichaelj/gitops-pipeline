@@ -1,0 +1,12 @@
+{{- /*
+Hub facts for GCP compositions, read as a required resource. Rendered from the
+hub's Argo CD cluster Secret, so nothing account-specific is committed.
+*/ -}}
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: gcp
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  projectID: {{ include "gcp.required" (dict "name" "projectID" "value" .Values.projectID) }}

@@ -1,0 +1,72 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: customer.exports.with-a-deliberately-long-name-for-truncation
+  namespace: infra-prod
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: storage.gcp.m.upbound.io/v1beta1
+      kind: Bucket
+      name: customer.exports.with-a-deliberately-long-name-for-407543fd7587
+status:
+  bucketName: infra-prod-customer-exports-with-a-deliberately-long-n-e38ff957
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: bucket'
+    reason: Creating
+    status: "False"
+    type: Ready
+  url: gs://infra-prod-customer-exports-with-a-deliberately-long-n-e38ff957
+---
+apiVersion: storage.gcp.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: bucket
+    crossplane.io/external-name: infra-prod-customer-exports-with-a-deliberately-long-n-e38ff957
+  generateName: customer.exports.with-a-deliberately-long-name-for-truncation-
+  labels:
+    crossplane.io/composite: customer.exports.with-a-deliberately-long-name-for-truncation
+  name: customer.exports.with-a-deliberately-long-name-for-407543fd7587
+  namespace: infra-prod
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: customer.exports.with-a-deliberately-long-name-for-truncation
+    uid: 91425924-edc9-5b3f-970f-fd182b82d741
+spec:
+  forProvider:
+    forceDestroy: false
+    labels:
+      cloud: gcp
+      env: prod
+      managed-by: crossplane
+      owner: data-team
+      xr-name: customer-exports-with-a-deliberately-long-name-for-truncation
+      xr-namespace: infra-prod
+    location: EU
+    publicAccessPrevention: enforced
+    storageClass: NEARLINE
+    uniformBucketLevelAccess: true
+    versioning:
+      enabled: true
+  managementPolicies:
+  - Observe
+  - Create
+  - Update
+  - LateInitialize
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

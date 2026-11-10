@@ -35,6 +35,10 @@ spec:
     - server: {{ $.Values.inClusterServer }}
       namespace: infra-{{ . }}
   clusterResourceWhitelist: []
+  # Only platform XRs: raw cloud resources and other kinds are refused at sync.
+  namespaceResourceWhitelist:
+    - group: platform.gitops-pipeline.io
+      kind: "*"
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject

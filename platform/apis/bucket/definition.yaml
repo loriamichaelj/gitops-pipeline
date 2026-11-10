@@ -1,0 +1,72 @@
+# XBucket: a private object-storage bucket. Each cloud has its own Composition,
+# selected by the XR's compositionSelector label `cloud`.
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xbuckets.platform.gitops-pipeline.io
+  annotations:
+    # Deleting an XRD deletes every XR of its type (and their cloud resources).
+    # Removal must be a deliberate manual step, never an Argo CD prune.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  scope: Namespaced
+  group: platform.gitops-pipeline.io
+  names:
+    kind: XBucket
+    plural: xbuckets
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  default: {}
+                  properties:
+                    location:
+                      description: Cloud location (GCS location, e.g. US-CENTRAL1 or US).
+                      type: string
+                      pattern: "^[A-Z0-9-]+$"
+                      default: US-CENTRAL1
+                    storageClass:
+                      type: string
+                      enum: [STANDARD, NEARLINE, COLDLINE, ARCHIVE]
+                      default: STANDARD
+                    versioning:
+                      type: boolean
+                      default: false
+                    forceDestroy:
+                      description: Delete the bucket even if it still holds objects.
+                      type: boolean
+                      default: false
+                    deletionPolicy:
+                      description: Orphan keeps the cloud bucket when the XR is deleted.
+                      type: string
+                      enum: [Delete, Orphan]
+                      default: Delete
+                    owner:
+                      description: Cost-allocation owner label.
+                      type: string
+                      pattern: "^[a-z0-9_-]{1,63}$"
+                      default: platform
+                  x-kubernetes-validations:
+                    - rule: "!(self.forceDestroy && self.deletionPolicy == 'Orphan')"
+                      message: forceDestroy has no effect with deletionPolicy Orphan
+            status:
+              type: object
+              properties:
+                bucketName:
+                  description: Name of the bucket in the cloud.
+                  type: string
+                url:
+                  type: string
+      additionalPrinterColumns:
+        - name: BUCKET
+          type: string
+          jsonPath: .status.bucketName

@@ -1,0 +1,58 @@
+{{- /*
+Wave 0: one Application per infrastructure/<env>/<cloud> folder, for hubs whose
+cluster Secret says they have identity in that cloud. Deleting a folder deletes
+its Application, and the finalizer then deletes its XRs and cloud resources.
+
+The inner {{`{{ }}`}} expressions are ApplicationSet go-templates, escaped from Helm.
+*/ -}}
+{{- range $cloud := .Values.infrastructure.clouds }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infrastructure-{{ $cloud }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  role: hub
+                  {{ $cloud }}-identity: federated
+          - git:
+              repoURL: {{ $.Values.repoURL }}
+              revision: {{ $.Values.targetRevision }}
+              directories:
+                {{- range $.Values.environments }}
+                - path: infrastructure/{{ . }}/{{ $cloud }}
+                {{- end }}
+  template:
+    metadata:
+      name: {{ printf "'infra-{{ index .path.segments 1 }}-%s'" $cloud }}
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: {{`'infra-{{ index .path.segments 1 }}'`}}
+      source:
+        repoURL: {{ $.Values.repoURL }}
+        targetRevision: {{ $.Values.targetRevision }}
+        path: {{`'{{ .path.path }}'`}}
+      destination:
+        server: {{`'{{ .server }}'`}}
+        namespace: {{`'infra-{{ index .path.segments 1 }}'`}}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # XR CRDs appear only once their XRD is established.
+          - SkipDryRunOnMissingResource=true
+        retry:
+          {{- toYaml $.Values.retry | nindent 10 }}
+{{- end }}

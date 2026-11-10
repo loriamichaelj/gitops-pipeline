@@ -1,0 +1,17 @@
+# Prod-style bucket: kept on XR deletion; long name with dots is truncated and sanitised.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: customer.exports.with-a-deliberately-long-name-for-truncation
+  namespace: infra-prod
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    location: EU
+    storageClass: NEARLINE
+    versioning: true
+    deletionPolicy: Orphan
+    owner: data-team

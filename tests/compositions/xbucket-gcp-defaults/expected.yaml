@@ -1,0 +1,69 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: storage.gcp.m.upbound.io/v1beta1
+      kind: Bucket
+      name: artifacts-5d24e9f7f293
+status:
+  bucketName: infra-dev-artifacts-2436ea7c
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: bucket'
+    reason: Creating
+    status: "False"
+    type: Ready
+  url: gs://infra-dev-artifacts-2436ea7c
+---
+apiVersion: storage.gcp.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: bucket
+    crossplane.io/external-name: infra-dev-artifacts-2436ea7c
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-5d24e9f7f293
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    forceDestroy: false
+    labels:
+      cloud: gcp
+      env: dev
+      managed-by: crossplane
+      owner: platform
+      xr-name: artifacts
+      xr-namespace: infra-dev
+    location: US-CENTRAL1
+    publicAccessPrevention: enforced
+    storageClass: STANDARD
+    uniformBucketLevelAccess: true
+    versioning:
+      enabled: false
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

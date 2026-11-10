@@ -1,0 +1,22 @@
+{{- /* Wave -4: composition functions, cloud-neutral, installed on every hub. */ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-functions
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  project: platform
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: platform/crossplane/functions
+  destination:
+    server: {{ .Values.inClusterServer }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      {{- toYaml .Values.retry | nindent 6 }}

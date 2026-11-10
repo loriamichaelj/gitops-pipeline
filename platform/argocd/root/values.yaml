@@ -3,9 +3,16 @@ repoURL: https://github.com/loriamichaelj/gitops-pipeline.git
 targetRevision: dev
 env: local
 
-# Environments that get infra-<env> and apps-<env> AppProjects.
+# Environments this hub serves: each gets an infra-<env> namespace, infra-<env>
+# and apps-<env> AppProjects, and its infrastructure/<env>/<cloud> folders.
 environments:
   - dev
+
+# Clouds with Compositions. A hub reconciles infrastructure/<env>/<cloud> only
+# when its cluster Secret carries the label <cloud>-identity=federated.
+infrastructure:
+  clouds:
+    - gcp
 
 inClusterServer: https://kubernetes.default.svc
 

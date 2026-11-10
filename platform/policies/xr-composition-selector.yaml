@@ -1,0 +1,21 @@
+# Every platform XR names its cloud, so adding a second Composition for the same
+# XRD can never silently re-home existing resources.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: xr-composition-selector
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [platform.gitops-pipeline.io]
+        apiVersions: ["*"]
+        operations: [CREATE, UPDATE]
+        resources: ["*"]
+  validations:
+    - expression: >-
+        has(object.spec.crossplane) && has(object.spec.crossplane.compositionSelector) &&
+        has(object.spec.crossplane.compositionSelector.matchLabels) &&
+        'cloud' in object.spec.crossplane.compositionSelector.matchLabels &&
+        object.spec.crossplane.compositionSelector.matchLabels['cloud'] in ['gcp', 'azure', 'aws']
+      message: spec.crossplane.compositionSelector.matchLabels.cloud must be one of gcp, azure, aws

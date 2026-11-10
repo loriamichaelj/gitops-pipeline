@@ -1,0 +1,15 @@
+# Sample dev bucket on GCP; forceDestroy lets a folder teardown delete it with its objects.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    location: US-CENTRAL1
+    forceDestroy: true
+    owner: platform

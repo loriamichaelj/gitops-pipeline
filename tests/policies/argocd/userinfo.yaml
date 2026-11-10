@@ -1,0 +1,7 @@
+# Changes synced from Git arrive as Argo CD's application controller.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: UserInfo
+metadata:
+  name: argocd
+userInfo:
+  username: system:serviceaccount:argocd:argocd-application-controller

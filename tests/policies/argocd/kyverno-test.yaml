@@ -1,0 +1,31 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: synced-from-git
+policies:
+  - ../../../platform/policies/infrastructure-platform-kinds-only.yaml
+  - ../../../platform/policies/xr-composition-selector.yaml
+resources:
+  - ../resources.yaml
+userinfo: userinfo.yaml
+results:
+  - policy: infrastructure-platform-kinds-only
+    isValidatingPolicy: true
+    resources: [infra-dev/good, infra-dev/no-selector, infra-dev/unknown-cloud]
+    kind: XBucket
+    result: pass
+  - policy: infrastructure-platform-kinds-only
+    isValidatingPolicy: true
+    resources: [infra-dev/raw-bucket]
+    kind: Bucket
+    result: fail
+  - policy: xr-composition-selector
+    isValidatingPolicy: true
+    resources: [infra-dev/good]
+    kind: XBucket
+    result: pass
+  - policy: xr-composition-selector
+    isValidatingPolicy: true
+    resources: [infra-dev/no-selector, infra-dev/unknown-cloud]
+    kind: XBucket
+    result: fail
