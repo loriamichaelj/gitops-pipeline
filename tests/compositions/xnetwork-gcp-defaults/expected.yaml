@@ -1,0 +1,93 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: compute.gcp.m.upbound.io/v1beta1
+      kind: Network
+      name: main-05c5da13ff75
+    - apiVersion: compute.gcp.m.upbound.io/v1beta1
+      kind: Subnetwork
+      name: main-715c8fc02857
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: network, subnet'
+    reason: Creating
+    status: "False"
+    type: Ready
+  networkName: infra-dev-main-8bf0de0f
+  subnetName: infra-dev-main-8bf0de0f
+---
+apiVersion: compute.gcp.m.upbound.io/v1beta1
+kind: Network
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: network
+    crossplane.io/external-name: infra-dev-main-8bf0de0f
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-05c5da13ff75
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    autoCreateSubnetworks: false
+    description: infra-dev/main, managed by Crossplane
+    routingMode: REGIONAL
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: compute.gcp.m.upbound.io/v1beta1
+kind: Subnetwork
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: subnet
+    crossplane.io/external-name: infra-dev-main-8bf0de0f
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-715c8fc02857
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    description: infra-dev/main, managed by Crossplane
+    ipCidrRange: 10.0.0.0/20
+    networkSelector:
+      matchControllerRef: true
+    privateIpGoogleAccess: true
+    region: us-central1
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

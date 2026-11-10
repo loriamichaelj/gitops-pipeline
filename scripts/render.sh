@@ -19,6 +19,7 @@ helm template crossplane-providers-gcp platform/crossplane/providers/gcp \
   --set projectID=example-project \
   --set wifProvider=projects/123456789012/locations/global/workloadIdentityPools/example/providers/example \
   --set families.storage.serviceAccount=xp-gcp-storage@example-project.iam.gserviceaccount.com \
+  --set families.compute.serviceAccount=xp-gcp-compute@example-project.iam.gserviceaccount.com \
   >"$out/crossplane-providers-gcp.yaml"
 
 helm template argocd argo-cd \

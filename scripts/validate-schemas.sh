@@ -13,7 +13,7 @@ crd_catalog=https://raw.githubusercontent.com/datreeio/CRDs-catalog/49729e49e8f0
 xp_version="v$(yq -r .crossplane.chartVersion platform/argocd/root/values.yaml)"
 
 # Kinds without a public schema, checked by crossplane resource validate below.
-crossplane_validated=XBucket,Bucket,ClusterProviderConfig
+crossplane_validated=XBucket,Bucket,XNetwork,Network,Subnetwork,ClusterProviderConfig
 # CustomResourceDefinitions ship unmodified in upstream charts, and
 # kubernetes-json-schema publishes no strict schema for them.
 
