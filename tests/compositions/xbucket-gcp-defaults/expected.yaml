@@ -54,6 +54,7 @@ spec:
       env: dev
       managed-by: crossplane
       owner: platform
+      repo: gitops-pipeline
       xr-name: artifacts
       xr-namespace: infra-dev
     location: US-CENTRAL1

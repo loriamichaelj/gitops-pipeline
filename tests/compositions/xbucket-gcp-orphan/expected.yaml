@@ -54,6 +54,7 @@ spec:
       env: prod
       managed-by: crossplane
       owner: data-team
+      repo: gitops-pipeline
       xr-name: customer-exports-with-a-deliberately-long-name-for-truncation
       xr-namespace: infra-prod
     location: EU
