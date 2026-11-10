@@ -14,7 +14,7 @@ variable "provider_id" {
 }
 
 variable "repository" {
-  description = "owner/name, used in the token subject."
+  description = "owner/name; the token subject is built from it and the numeric IDs."
   type        = string
 }
 

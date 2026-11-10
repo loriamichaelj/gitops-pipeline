@@ -1,4 +1,11 @@
 locals {
+  # GitHub's immutable subject format embeds the numeric IDs:
+  #   repo:<owner>@<owner_id>/<name>@<repository_id>:environment:<env>
+  # It is the default for new repositories (see the repo's OIDC customization).
+  repo_owner  = split("/", var.repository)[0]
+  repo_name   = split("/", var.repository)[1]
+  subject_for = "repo:${local.repo_owner}@${var.repository_owner_id}/${local.repo_name}@${var.repository_id}"
+
   project_roles = merge([
     for env, cfg in var.environments : {
       for role in cfg.project_roles : "${env}/${role}" => { env = env, role = role }
@@ -53,11 +60,13 @@ resource "google_project_iam_member" "environment" {
 }
 
 # A job may impersonate an environment's service account only when it runs in
-# that GitHub environment, whose branch and approval rules then apply.
+# that GitHub environment, whose branch and approval rules then apply. The
+# subject embeds the numeric IDs, so a renamed or recreated repository does not
+# match.
 resource "google_service_account_iam_member" "federation" {
   for_each = var.environments
 
   service_account_id = google_service_account.environment[each.key].name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:${var.repository}:environment:${each.key}"
+  member             = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/${local.subject_for}:environment:${each.key}"
 }

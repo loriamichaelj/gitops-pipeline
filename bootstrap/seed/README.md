@@ -6,7 +6,8 @@ Creates what CI needs before it can do anything else:
 - the **GitHub OIDC trust**: a workload identity pool and provider that accept
   tokens only from this repository (matched by numeric repository and owner ID),
 - one **service account per GitHub environment**, each impersonable only by jobs
-  running in that environment:
+  running in that environment (the token subject must match GitHub's immutable
+  format, `repo:<owner>@<id>/<name>@<id>:environment:<env>`):
 
 | Environment | Can do | Gate |
 |---|---|---|
