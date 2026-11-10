@@ -1,0 +1,101 @@
+name: seed
+
+# Maintains the foundations CI itself depends on: the OpenTofu state bucket and
+# the GitHub OIDC identities (bootstrap/seed). Cloud access is by OIDC federation
+# only; no key is stored anywhere. The first run could not use OIDC (the trust did
+# not exist yet) and was done by an operator; see bootstrap/seed/README.md.
+#
+#   plan   runs in the `ci` environment (read-only identity), on pull requests
+#          and on demand.
+#   apply  runs in the `seed` environment, which requires approval and only
+#          accepts the dev branch. Review the plan job's output before approving.
+
+on:
+  pull_request:
+    paths:
+      - bootstrap/seed/**
+      - bootstrap/modules/github-oidc/**
+      - bootstrap/modules/state-bucket/**
+      - .github/workflows/seed.yml
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply after planning (dev branch only; needs approval in the seed environment)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "1"
+  # Repository IDs come from the run itself, never from configuration.
+  TF_VAR_repository: ${{ github.repository }}
+  TF_VAR_repository_id: ${{ github.repository_id }}
+  TF_VAR_repository_owner_id: ${{ github.repository_owner_id }}
+
+jobs:
+  plan:
+    name: plan
+    # Secrets are not available to pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: ci
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tofu
+        run: .github/scripts/install-tools.sh tofu
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Init
+        run: tofu -chdir=bootstrap/seed init -input=false -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      # The read-only identity cannot write the state lock.
+      - name: Plan
+        run: tofu -chdir=bootstrap/seed plan -input=false -lock=false
+
+  apply:
+    name: apply
+    needs: plan
+    if: github.event_name == 'workflow_dispatch' && inputs.apply && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: seed
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tofu
+        run: .github/scripts/install-tools.sh tofu
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Init
+        run: tofu -chdir=bootstrap/seed init -input=false -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Apply
+        run: tofu -chdir=bootstrap/seed apply -input=false -auto-approve

@@ -1,0 +1,89 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xbuckets-gcp
+  labels:
+    cloud: gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.gitops-pipeline.io/v1alpha1
+    kind: XBucket
+  mode: Pipeline
+  pipeline:
+    - step: compose
+      functionRef:
+        name: function-kcl
+      requirements:
+        requiredResources:
+          # Hub facts (project ID), rendered from the hub's Argo CD cluster Secret.
+          - requirementName: environment
+            apiVersion: apiextensions.crossplane.io/v1beta1
+            kind: EnvironmentConfig
+            name: gcp
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            import crypto
+
+            _p = option("params")
+            _xr = _p.oxr
+            _params = _xr.spec?.parameters or {}
+
+            _envs = _p?.requiredResources?.environment or []
+            _projectID = _envs[0]?.Resource?.data?.projectID if _envs else ""
+            assert _projectID, "EnvironmentConfig 'gcp' with data.projectID not found: this hub has no GCP identity"
+
+            _ns = _xr.metadata.namespace
+            _name = _xr.metadata.name
+
+            # Deterministic and globally unique: the same XR in the same project always
+            # maps to the same bucket, so a rebuilt hub adopts it instead of creating one.
+            # GCS forbids dots without domain verification, so they become dashes.
+            _hash = crypto.sha256("${_projectID}/${_ns}/${_name}")[:8]
+            _readable = "${_ns}-${_name}".replace(".", "-")
+            _bucketName = _readable[:54].rstrip("-") + "-" + _hash
+
+            _orphan = (_params?.deletionPolicy or "Delete") == "Orphan"
+
+            _bucket = {
+                apiVersion = "storage.gcp.m.upbound.io/v1beta1"
+                kind = "Bucket"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "bucket"
+                    "crossplane.io/external-name" = _bucketName
+                }
+                spec = {
+                    # Orphan: everything except Delete.
+                    managementPolicies = ["Observe", "Create", "Update", "LateInitialize"] if _orphan else ["*"]
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        location = _params?.location or "US-CENTRAL1"
+                        storageClass = _params?.storageClass or "STANDARD"
+                        versioning.enabled = _params?.versioning or False
+                        forceDestroy = _params?.forceDestroy or False
+                        uniformBucketLevelAccess = True
+                        publicAccessPrevention = "enforced"
+                        labels = {
+                            "env" = _ns.removeprefix("infra-")
+                            "cloud" = "gcp"
+                            "owner" = _params?.owner or "platform"
+                            "managed-by" = "crossplane"
+                            "xr-namespace" = _ns
+                            "xr-name" = _name.replace(".", "-")[:63]
+                        }
+                    }
+                }
+            }
+
+            _dxr = {
+                **_p.dxr
+                status.bucketName = _bucketName
+                status.url = "gs://${_bucketName}"
+            }
+
+            items = [_bucket, _dxr]
+    - step: ready
+      functionRef:
+        name: function-auto-ready

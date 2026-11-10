@@ -1,0 +1,53 @@
+{{- /*
+Wave -4: GCP providers, runtime configs and ProviderConfig, for every hub whose
+cluster Secret says it has GCP identity. Environment facts come from the cluster
+Secret's annotations; nothing account-specific is committed.
+
+The inner {{`{{ }}`}} expressions are ApplicationSet go-templates, escaped from Helm.
+*/ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: crossplane-providers-gcp
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: hub
+            gcp-identity: federated
+  template:
+    metadata:
+      name: {{`'crossplane-providers-gcp-{{ .name }}'`}}
+    spec:
+      project: platform
+      source:
+        repoURL: {{ .Values.repoURL }}
+        targetRevision: {{ .Values.targetRevision }}
+        path: platform/crossplane/providers/gcp
+        helm:
+          releaseName: crossplane-providers-gcp
+          valuesObject:
+            projectID: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/project-id" }}'`}}
+            wifProvider: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/wif-provider" }}'`}}
+            audience: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/audience" }}'`}}
+            families:
+              storage:
+                serviceAccount: {{`'{{ index .metadata.annotations "gcp.gitops-pipeline/sa.provider-gcp-storage" }}'`}}
+      destination:
+        server: {{`'{{ .server }}'`}}
+        namespace: {{ .Values.crossplane.namespace }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # ClusterProviderConfig's CRD appears only once the family provider is installed.
+          - SkipDryRunOnMissingResource=true
+        retry:
+          {{- toYaml .Values.retry | nindent 10 }}

@@ -1,0 +1,73 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform:
+    name: render, compositions, schemas
+    runs-on: ubuntu-latest
+    env:
+      CROSSPLANE_CLI_VERSION: v2.5.0 # no release binaries; built from the tagged module
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+          cache: false
+
+      - name: Install tools
+        run: |
+          .github/scripts/install-tools.sh helm yq kubeconform
+          # Module checksums are verified against sum.golang.org.
+          go install "github.com/crossplane/cli/v2/cmd/crossplane@${CROSSPLANE_CLI_VERSION}"
+          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+
+      - name: Render Helm sources
+        run: scripts/render.sh
+
+      - name: Composition snapshot tests
+        run: scripts/test-compositions.sh
+
+      - name: Schema validation
+        run: scripts/validate-schemas.sh
+
+  policies:
+    name: kyverno policies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        run: .github/scripts/install-tools.sh kyverno
+
+      - name: Policy tests and infrastructure checks
+        run: scripts/check-policies.sh
+
+  bootstrap:
+    name: opentofu bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install tools
+        run: .github/scripts/install-tools.sh tofu trivy
+
+      - name: fmt, validate, trivy
+        run: scripts/check-tofu.sh

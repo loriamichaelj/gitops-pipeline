@@ -1,0 +1,15 @@
+# crossplane chart values (chart version pinned in platform/argocd/root/values.yaml).
+# Providers and functions are not installed through the chart: they are declared
+# in platform/crossplane/providers/<cloud> so each gets its own runtime config.
+
+replicas: 1
+
+metrics:
+  enabled: true
+
+resourcesCrossplane:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi

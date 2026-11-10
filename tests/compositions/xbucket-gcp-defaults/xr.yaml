@@ -1,0 +1,10 @@
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp

@@ -1,0 +1,45 @@
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: good
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: no-selector
+  namespace: infra-dev
+spec: {}
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: unknown-cloud
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: on-prem
+---
+apiVersion: storage.gcp.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  name: raw-bucket
+  namespace: infra-dev
+spec:
+  forProvider:
+    location: US-CENTRAL1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: outside-infra
+  namespace: apps
+data:
+  key: value

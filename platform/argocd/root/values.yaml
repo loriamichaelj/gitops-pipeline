@@ -1,0 +1,35 @@
+# Bootstrap overrides repoURL, targetRevision, env and argocd.chartVersion.
+repoURL: https://github.com/loriamichaelj/gitops-pipeline.git
+targetRevision: dev
+env: local
+
+# Environments this hub serves: each gets an infra-<env> namespace, infra-<env>
+# and apps-<env> AppProjects, and its infrastructure/<env>/<cloud> folders.
+environments:
+  - dev
+
+# Clouds with Compositions. A hub reconciles infrastructure/<env>/<cloud> only
+# when its cluster Secret carries the label <cloud>-identity=federated.
+infrastructure:
+  clouds:
+    - gcp
+
+inClusterServer: https://kubernetes.default.svc
+
+argocd:
+  chartRepo: https://argoproj.github.io/argo-helm
+  chartVersion: 10.11.1
+
+crossplane:
+  chartRepo: https://charts.crossplane.io/stable
+  chartVersion: 2.4.3
+  namespace: crossplane-system
+
+# Retry policy for platform Applications. CRDs from Crossplane packages appear
+# asynchronously, so first syncs can need a few attempts.
+retry:
+  limit: 10
+  backoff:
+    duration: 10s
+    factor: 2
+    maxDuration: 5m

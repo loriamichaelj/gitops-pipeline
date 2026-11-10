@@ -1,0 +1,32 @@
+{{- /* Wave -9: Argo CD manages itself, same chart version and values as bootstrap. */ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-9"
+spec:
+  project: platform
+  sources:
+    - repoURL: {{ .Values.argocd.chartRepo }}
+      chart: argo-cd
+      targetRevision: {{ .Values.argocd.chartVersion }}
+      helm:
+        releaseName: argocd
+        valueFiles:
+          - $values/platform/argocd/values.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.targetRevision }}
+      ref: values
+  destination:
+    server: {{ .Values.inClusterServer }}
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: false # never let a bad commit delete Argo CD itself
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true # Argo CD CRDs exceed the client-side apply annotation limit
+    retry:
+      {{- toYaml .Values.retry | nindent 6 }}

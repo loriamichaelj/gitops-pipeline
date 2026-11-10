@@ -1,0 +1,29 @@
+# infrastructure/ may hold platform XRs only, so cloud details live solely in
+# Compositions. Runs in CI against infrastructure/, and at admission once Kyverno
+# is installed. Crossplane's own composed resources are exempt.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: infrastructure-platform-kinds-only
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations: [CREATE, UPDATE]
+        resources: ["*"]
+  matchConditions:
+    - name: infra-namespace
+      expression: >-
+        has(object.metadata.namespace) && object.metadata.namespace.startsWith('infra-')
+    - name: not-a-controller
+      expression: >-
+        !request.userInfo.username.startsWith('system:serviceaccount:crossplane-system:') &&
+        !request.userInfo.username.startsWith('system:serviceaccount:kube-system:') &&
+        request.userInfo.username != 'system:kube-controller-manager'
+  validations:
+    - expression: "object.apiVersion.startsWith('platform.gitops-pipeline.io/')"
+      messageExpression: >-
+        'infrastructure namespaces accept platform XRs only (platform.gitops-pipeline.io), got ' +
+        object.apiVersion + ' ' + object.kind

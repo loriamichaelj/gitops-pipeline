@@ -1,0 +1,7 @@
+# Crossplane composing a managed resource into an infra namespace.
+apiVersion: cli.kyverno.io/v1alpha1
+kind: UserInfo
+metadata:
+  name: crossplane
+userInfo:
+  username: system:serviceaccount:crossplane-system:crossplane

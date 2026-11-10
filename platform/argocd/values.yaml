@@ -1,0 +1,114 @@
+# argo-cd chart values. Used twice with the same chart version:
+#   1. bootstrap installs Argo CD with this file,
+#   2. the self-managed "argocd" Application (root chart) keeps it reconciled.
+
+dex:
+  enabled: false # no SSO on the local hub
+
+configs:
+  params:
+    server.insecure: true # local hub is reached through kubectl port-forward
+
+  cm:
+    exec.enabled: false
+    timeout.reconciliation: 120s
+
+    # Child Applications have no built-in health in Argo CD, so sync waves in the
+    # root app-of-apps would not wait for them. Report the child's own health.
+    resource.customizations.health.argoproj.io_Application: |
+      hs = { status = "Progressing", message = "" }
+      if obj.status ~= nil and obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+      return hs
+
+    # Crossplane health: waves wait on Ready=True, not just "applied".
+    # Wildcard keys are only honoured in this combined form.
+    resource.customizations: |
+      "*.crossplane.io/*":
+        health.lua: |
+          local no_status = {
+            Composition = true, CompositionRevision = true,
+            DeploymentRuntimeConfig = true, EnvironmentConfig = true, ImageConfig = true,
+            ManagedResourceActivationPolicy = true,
+          }
+          local hs = { status = "Progressing", message = "Waiting for conditions" }
+          if no_status[obj.kind] then
+            hs.status = "Healthy"; hs.message = ""
+            return hs
+          end
+          if obj.status == nil or obj.status.conditions == nil then
+            return hs
+          end
+          local ready = false
+          for _, c in ipairs(obj.status.conditions) do
+            -- Packages report Installed=False while unpacking; that is progress, not failure.
+            if c.type == "Synced" and c.status == "False" then
+              hs.status = "Degraded"; hs.message = c.message or c.reason or c.type
+              return hs
+            end
+            if (c.type == "Ready" or c.type == "Healthy" or c.type == "Established"
+                or c.type == "Offered" or c.type == "ValidPipeline") and c.status == "True" then
+              ready = true
+            end
+          end
+          if ready then hs.status = "Healthy"; hs.message = "" end
+          return hs
+      "*.upbound.io/*":
+        health.lua: |
+          local no_status = {
+            ProviderConfig = true, ClusterProviderConfig = true,
+            ProviderConfigUsage = true, ClusterProviderConfigUsage = true,
+          }
+          local hs = { status = "Progressing", message = "Waiting for conditions" }
+          if no_status[obj.kind] then
+            hs.status = "Healthy"; hs.message = ""
+            return hs
+          end
+          if obj.status == nil or obj.status.conditions == nil then
+            return hs
+          end
+          for _, c in ipairs(obj.status.conditions) do
+            if (c.type == "Synced" or c.type == "LastAsyncOperation") and c.status == "False" then
+              hs.status = "Degraded"; hs.message = c.message or c.reason or c.type
+              return hs
+            end
+          end
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Ready" and c.status == "True" then
+              hs.status = "Healthy"; hs.message = ""
+            end
+          end
+          return hs
+      # Platform XRs (XBucket, ...): Healthy once Crossplane reports Ready=True.
+      "*.gitops-pipeline.io/*":
+        health.lua: |
+          local hs = { status = "Progressing", message = "Waiting for conditions" }
+          if obj.status == nil or obj.status.conditions == nil then
+            return hs
+          end
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Synced" and c.status == "False" then
+              hs.status = "Degraded"; hs.message = c.message or c.reason or c.type
+              return hs
+            end
+          end
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Ready" then
+              if c.status == "True" then
+                hs.status = "Healthy"; hs.message = ""
+              else
+                hs.message = c.message or c.reason or "Not ready"
+              end
+            end
+          end
+          return hs
+
+    # Crossplane writes one usage object per managed resource; they are never
+    # declared in Git and only add watch load.
+    resourceExclusionsAdditional:
+      - apiGroups: ["*"]
+        kinds: ["ProviderConfigUsage", "ClusterProviderConfigUsage"]

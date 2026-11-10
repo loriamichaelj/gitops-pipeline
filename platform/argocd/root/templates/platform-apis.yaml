@@ -1,0 +1,27 @@
+{{- /*
+Wave -2: the platform API (XRDs and Compositions). XRDs carry Prune=false and
+Delete=false themselves; Compositions are pruned normally.
+*/ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-apis
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: platform
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.targetRevision }}
+    path: platform/apis
+    directory:
+      recurse: true
+  destination:
+    server: {{ .Values.inClusterServer }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      {{- toYaml .Values.retry | nindent 6 }}

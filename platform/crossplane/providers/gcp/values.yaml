@@ -1,0 +1,18 @@
+# Environment facts (projectID, wifProvider, audience, families.*.serviceAccount)
+# are injected by the crossplane-providers-gcp ApplicationSet from the hub's
+# Argo CD cluster Secret. Defaults are empty on purpose.
+
+registry: xpkg.upbound.io/upbound
+version: v3.1.0
+
+projectID: ""
+# projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+wifProvider: ""
+# Audience the projected service-account token carries; must match the WIF provider.
+audience: gitops-pipeline-hub
+
+# One provider per family. Each runs as Kubernetes service account
+# provider-gcp-<family> and impersonates its own GCP service account.
+families:
+  storage:
+    serviceAccount: ""
