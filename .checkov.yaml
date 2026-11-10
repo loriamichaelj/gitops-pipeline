@@ -1,0 +1,20 @@
+# checkov configuration. Run through scripts/scan.sh so CI and a laptop use the same
+# pinned image. Per-resource exceptions are inline `checkov:skip` comments next to the
+# resource, each with its reason.
+framework:
+  - terraform
+  - github_actions
+  - kubernetes
+skip-path:
+  - rendered
+  - tests
+compact: true
+quiet: true
+skip-download: true
+
+# CKV_GHA_7 requires workflow_dispatch to take no inputs, so a build's output cannot
+# be influenced by whoever starts it. None of these workflows build or publish
+# anything. The inputs choose whether to apply (which also needs an approval in the
+# seed environment), a branch to compare with, and how long to wait.
+skip-check:
+  - CKV_GHA_7

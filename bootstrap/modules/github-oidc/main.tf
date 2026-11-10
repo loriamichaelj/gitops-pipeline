@@ -24,6 +24,8 @@ resource "google_iam_workload_identity_pool" "github" {
 # immutable numeric IDs are checked, not the names: a renamed, deleted or
 # recreated repository cannot inherit access.
 resource "google_iam_workload_identity_pool_provider" "github" {
+  # checkov:skip=CKV_GCP_118: attribute_condition is set; it checks the repository and owner IDs.
+  # checkov:skip=CKV_GCP_125: The check only recognises an assertion.sub equality. The numeric ID condition below is stricter, and each environment's subject is pinned on its service account binding.
   project                            = var.project_id
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = var.provider_id

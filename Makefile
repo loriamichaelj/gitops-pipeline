@@ -1,9 +1,9 @@
 # Same checks locally and in CI (.github/workflows/validate.yml).
-# Needs: helm, yq, kubeconform, crossplane, kyverno, tofu, trivy, docker.
+# Needs: helm, yq, kubeconform, crossplane, kyverno, tofu, trivy, docker (also runs checkov).
 
-.PHONY: validate render compositions schemas policies tofu update-snapshots
+.PHONY: validate render compositions schemas policies tofu scan update-snapshots
 
-validate: render compositions schemas policies tofu
+validate: render compositions schemas policies tofu scan
 
 render:
 	scripts/render.sh
@@ -19,6 +19,9 @@ policies:
 
 tofu:
 	scripts/check-tofu.sh
+
+scan:
+	scripts/scan.sh
 
 update-snapshots: render
 	UPDATE=1 scripts/test-compositions.sh

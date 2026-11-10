@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
 
       - name: Install tools
-        run: .github/scripts/install-tools.sh tofu trivy
+        run: .github/scripts/install-tools.sh tofu
 
-      - name: fmt, validate, trivy
+      - name: fmt, validate
         run: scripts/check-tofu.sh
