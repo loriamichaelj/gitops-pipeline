@@ -1,0 +1,71 @@
+name: platform plan
+
+# Previews what a change does to the cloud. Every XR under infrastructure/ is
+# rendered through its composition on the base branch and on this change, and the
+# managed resources are compared with each other and with what exists in the
+# cloud. Nothing is applied: after merge, Argo CD and Crossplane make the change.
+# The result is in the run's summary.
+#
+# Runs in the `ci` environment (read-only identity), by OIDC federation.
+
+on:
+  pull_request:
+    paths:
+      - infrastructure/**
+      - platform/apis/**
+      - platform/crossplane/functions/**
+      - platform/argocd/root/values.yaml
+      - scripts/infra.sh
+      - .github/workflows/platform-plan.yml
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Branch to compare with (equal to the current branch checks live state only)
+        type: string
+        default: dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: plan
+    # Secrets are not available to pull requests from forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: ci
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CROSSPLANE_CLI_VERSION: v2.5.0 # no release binaries; built from the tagged module
+      INFRA_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      BASE: ${{ github.base_ref || inputs.base }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base branch is rendered too
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+          cache: false
+
+      - name: Install tools
+        run: |
+          .github/scripts/install-tools.sh yq
+          go install "github.com/crossplane/cli/v2/cmd/crossplane@${CROSSPLANE_CLI_VERSION}"
+          echo "$(go env GOPATH)/bin" >>"$GITHUB_PATH"
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Plan
+        run: scripts/infra.sh plan "origin/${BASE}" | tee -a "$GITHUB_STEP_SUMMARY"
