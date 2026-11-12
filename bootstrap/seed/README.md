@@ -13,7 +13,7 @@ Creates what CI needs before it can do anything else:
 |---|---|---|
 | `ci` | read project and state; plan only | none |
 | `seed` | manage this module (pool, service accounts, IAM, bucket) | approval, `dev` branch only |
-| `dev` | read/write state under `dev/` only; roles are added with the stacks that need them | `dev` branch only |
+| `dev` | read buckets and networks (`platform apply` verifies the hub converged); read/write state under `dev/` only; roles are added with the stacks that need them | `dev` branch only |
 
 The `seed` workflow (`.github/workflows/seed.yml`) plans in `ci` and applies in
 `seed`.

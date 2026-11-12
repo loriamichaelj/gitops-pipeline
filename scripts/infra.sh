@@ -9,7 +9,7 @@
 #   infra.sh verify [seconds]    waits until the cloud matches the rendered resources
 #
 # Needs INFRA_PROJECT_ID, crossplane, docker (composition functions), yq, jq, and
-# gcloud credentials that can read buckets. Output is markdown on stdout.
+# gcloud credentials that can read buckets and networks. Output is markdown on stdout.
 set -euo pipefail
 
 repo=$(git rev-parse --show-toplevel)
@@ -76,17 +76,28 @@ index() {
 
 # check_live <resource-json>: print the live state and return
 #   0 in sync   1 not found   2 differs   3 cannot tell
+# A kind without a check here is "cannot tell", so verify fails until one is added.
 check_live() {
   local want=$1 kind name live err delta
+  local -a describe
   kind=$(jq -r .kind <<<"$want")
   name=$(jq -r '.metadata.annotations["crossplane.io/external-name"]' <<<"$want")
-  if [[ $kind != Bucket ]]; then
-    echo "not checked ($kind)"
-    return 0
-  fi
+  case $kind in
+    Bucket) describe=(storage buckets describe "gs://$name" --raw) ;;
+    Network) describe=(compute networks describe "$name" --project="$INFRA_PROJECT_ID") ;;
+    Subnetwork)
+      describe=(compute networks subnets describe "$name" --project="$INFRA_PROJECT_ID"
+        --region="$(jq -r .spec.forProvider.region <<<"$want")")
+      ;;
+    *)
+      echo "cannot check: infra.sh has no live check for $kind"
+      return 3
+      ;;
+  esac
   err=$(mktemp)
-  if ! live=$(gcloud storage buckets describe "gs://$name" --raw --format=json 2>"$err"); then
-    if grep -qE 'not found: 404' "$err"; then
+  if ! live=$(gcloud "${describe[@]}" --format=json 2>"$err"); then
+    # storage: "not found: 404"; compute: "The resource '...' was not found"
+    if grep -qE 'not found: 404|was not found' "$err"; then
       echo "not found"
       rm -f "$err"
       return 1
@@ -96,14 +107,27 @@ check_live() {
     return 3
   fi
   rm -f "$err"
-  delta=$(jq -rn --argjson w "$want" --argjson l "$live" '
+  # Each mismatch reads "<field> <live> vs <wanted>".
+  delta=$(jq -rn --arg kind "$kind" --arg name "$name" --argjson w "$want" --argjson l "$live" '
+    def mismatch(field; have; want):
+      if have != want then "\(field) \(have) vs \(want)" else empty end;
+    def ranges: [.[]? | "\(.rangeName)=\(.ipCidrRange)"] | sort | join(",")
+      | if . == "" then "none" else . end;
     $w.spec.forProvider as $p
-    | [ (if ($p.location | ascii_upcase) != ($l.location | ascii_upcase)
-         then "location \($l.location) vs \($p.location)" else empty end),
-        (if ($p.storageClass // "STANDARD") != $l.storageClass
-         then "storageClass \($l.storageClass) vs \($p.storageClass // "STANDARD")" else empty end),
-        (if ($p.versioning.enabled // false) != ($l.versioning.enabled // false)
-         then "versioning \($l.versioning.enabled // false) vs \($p.versioning.enabled // false)" else empty end) ]
+    | [ if $kind == "Bucket" then
+          mismatch("location"; $l.location | ascii_upcase; $p.location | ascii_upcase),
+          mismatch("storageClass"; $l.storageClass; $p.storageClass // "STANDARD"),
+          mismatch("versioning"; $l.versioning.enabled // false; $p.versioning.enabled // false)
+        elif $kind == "Network" then
+          mismatch("autoCreateSubnetworks"; $l.autoCreateSubnetworks // false; $p.autoCreateSubnetworks // false),
+          mismatch("routingMode"; $l.routingConfig.routingMode; $p.routingMode // "REGIONAL")
+        else
+          # The subnet shares its network'"'"'s name (see the network composition).
+          mismatch("network"; $l.network | split("/") | last; $name),
+          mismatch("ipCidrRange"; $l.ipCidrRange; $p.ipCidrRange),
+          mismatch("privateIpGoogleAccess"; $l.privateIpGoogleAccess // false; $p.privateIpGoogleAccess // false),
+          mismatch("secondaryIpRanges"; $l.secondaryIpRanges | ranges; $p.secondaryIpRange | ranges)
+        end ]
     | join(", ")')
   if [[ -n $delta ]]; then
     echo "differs: $delta"
