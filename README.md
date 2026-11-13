@@ -3,8 +3,12 @@
 A GitOps platform for multi-cloud infrastructure. A local kind cluster (the
 "hub") runs Argo CD and Crossplane. You declare cloud resources as YAML under
 `infrastructure/`. Argo CD syncs them to the hub, and Crossplane Compositions
-create the cloud resources. GCP is the only cloud so far, and `dev` is the only
-environment.
+create the cloud resources.
+
+The repository deploys nothing by default. It is set up for GCP, AWS and Azure:
+the clouds are listed in `platform/argocd/root/values.yaml`, and each cloud is
+enabled by adding its Compositions and its XRs. Compositions exist for GCP only so
+far (see [platform/apis/README.md](platform/apis/README.md)).
 
 ## How a change reaches the cloud
 
@@ -35,11 +39,15 @@ Compositions), and finally `infrastructure/`.
 | `XBucket` | `location`, `storageClass`, `versioning`, `forceDestroy`, `deletionPolicy`, `owner` | Private GCS bucket (uniform access, public access prevention enforced) |
 | `XNetwork` | `region`, `cidr`, `podsCidr` + `servicesCidr` (optional, set together), `deletionPolicy` | Custom-mode VPC with one subnet, optional secondary ranges for GKE |
 
+AWS and Azure have no Compositions yet. The contract for adding them is in
+[platform/apis/README.md](platform/apis/README.md).
+
 Cloud names are deterministic (`<namespace>-<name>-<hash>`), so a rebuilt hub
 adopts existing resources instead of creating new ones. Setting
 `deletionPolicy: Orphan` keeps the cloud resource when the XR is deleted.
 
-A claim picks its cloud with a `compositionSelector`:
+A claim picks its cloud with a `compositionSelector`. This is an example for
+`infrastructure/<env>/<cloud>/`; no claim is checked in:
 
 ```yaml
 apiVersion: platform.gitops-pipeline.io/v1alpha1
@@ -60,7 +68,7 @@ spec:
 
 | Path | Contents |
 |---|---|
-| `infrastructure/<env>/<cloud>/` | The XRs the hub reconciles |
+| `infrastructure/<env>/<cloud>/` | The XRs the hub reconciles (none checked in; see [infrastructure/README.md](infrastructure/README.md)) |
 | `platform/apis/` | XRDs and per-cloud Compositions |
 | `platform/argocd/root/` | App-of-apps Helm chart: pinned chart versions, environments, clouds |
 | `platform/crossplane/` | Crossplane install values, composition functions, GCP provider chart |

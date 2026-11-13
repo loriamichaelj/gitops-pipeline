@@ -8,11 +8,15 @@ env: local
 environments:
   - dev
 
-# Clouds with Compositions. A hub reconciles infrastructure/<env>/<cloud> only
-# when its cluster Secret carries the label <cloud>-identity=federated.
+# Clouds the platform knows. A hub reconciles infrastructure/<env>/<cloud> only when
+# that folder exists and its cluster Secret carries the label <cloud>-identity=federated.
+# Nothing is deployed by default: no hub is labelled and no XR is checked in. See
+# platform/apis/README.md for what a cloud needs before it can be used.
 infrastructure:
   clouds:
     - gcp
+    - aws
+    - azure
 
 inClusterServer: https://kubernetes.default.svc
 
