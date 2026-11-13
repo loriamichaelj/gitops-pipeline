@@ -13,7 +13,7 @@ far (see [platform/apis/README.md](platform/apis/README.md)).
 ## How a change reaches the cloud
 
 ```
-PR to dev ──► CI: validate, scan, security, platform plan (preview against live GCP)
+PR to dev ──► CI: validate, scan, security
    │ merge
    ▼
 Argo CD on the hub (app-of-apps chart: platform/argocd/root)
@@ -25,7 +25,7 @@ XRs (XBucket, XNetwork) in infra-<env> ──► Compositions (KCL, function-kcl
 Crossplane GCP providers, one per family, each authenticating by workload
 identity federation (no keys)
    ▼
-GCP resources      ◄── platform apply workflow waits until the cloud matches
+GCP resources
 ```
 
 The root chart orders the rollout with sync waves: namespaces and AppProjects,
@@ -123,18 +123,9 @@ export KUBECONFIG=$(tofu output -raw kubeconfig)
 commands for reaching the Argo CD UI. To test a feature branch on the hub before
 opening a PR, set `target_revision` in `terraform.tfvars`.
 
-### Preview a change
-
-```sh
-INFRA_PROJECT_ID=<project> scripts/infra.sh plan origin/dev
-```
-
-This renders every XR on the base ref and on the working tree, then compares the
-managed resources with each other and with what exists in GCP. It only reads.
-
 ## Workflow
 
-Infrastructure changes go through a pull request to `dev`. CI reaches GCP only by
-OIDC federation, with one service account per GitHub environment (`ci`, `seed`,
-`dev`). After merge, Argo CD and Crossplane apply the change. The `platform apply`
-workflow (manual, `dev` only) confirms the cloud converged.
+Infrastructure changes go through a pull request to `dev`. After merge, Argo CD
+and Crossplane apply the change. CI reaches GCP only by OIDC federation, with one
+service account per GitHub environment (`ci`, `seed`, `dev`). The `seed` workflow
+maintains those identities.

@@ -21,8 +21,6 @@ spec:
    label `<cloud>-identity=federated` only once that identity exists.
 3. Add a snapshot case under `tests/compositions/` for each new Composition, then
    run `make update-snapshots` and review the diff.
-4. Add a live check for each new managed resource kind in `scripts/infra.sh`, or
-   `verify` reports it as "cannot check".
 
 `platform/argocd/root/values.yaml` already lists `gcp`, `aws` and `azure` under
 `infrastructure.clouds`. Listing a cloud creates no resources: an Application
@@ -35,5 +33,5 @@ exists only for a folder that is checked in and a hub labelled for that cloud.
 | `XBucket` | Composition (GCS bucket) | not written | not written |
 | `XNetwork` | Composition (custom VPC, one subnet) | not written | not written |
 
-An XR for a cloud without a Composition fails to render: `infra.sh` and CI report
-"no <cloud> composition for <kind>" rather than skipping it.
+An XR for a cloud without a Composition has nothing to run in Crossplane, so it
+never becomes ready.

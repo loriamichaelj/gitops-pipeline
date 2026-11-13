@@ -36,15 +36,11 @@ locals {
       ]
     }
 
-    # Confirms the dev environment's infrastructure: reads buckets and networks to
-    # check that the hub's changes arrived (scripts/infra.sh verify). Roles are added
-    # with the stacks that need them; it also has its own state prefix (below).
+    # Reads and writes only its own state prefix (below). No project roles: nothing
+    # in the repository reads cloud resources. Add roles with the stack that needs them.
     dev = {
-      account_id = "gha-dev"
-      project_roles = [
-        "roles/storage.bucketViewer",
-        "roles/compute.networkViewer",
-      ]
+      account_id    = "gha-dev"
+      project_roles = []
     }
   }
 }
