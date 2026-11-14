@@ -1,0 +1,14 @@
+# A virtual network with one subnet covering its range, in East US.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: azure
+  parameters:
+    region: eastus
+    cidr: 10.0.0.0/20

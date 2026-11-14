@@ -1,0 +1,14 @@
+# Azure has no archive tier on a storage account, so an archive bucket is refused.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: cold
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: azure
+  parameters:
+    location: eastus
+    storageClass: ARCHIVE

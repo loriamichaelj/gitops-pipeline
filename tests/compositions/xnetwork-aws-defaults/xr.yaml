@@ -1,0 +1,14 @@
+# A private VPC with one subnet covering its range, in us-east-1.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: aws
+  parameters:
+    region: us-east-1
+    cidr: 10.0.0.0/20

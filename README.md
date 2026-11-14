@@ -5,10 +5,11 @@ A GitOps platform for multi-cloud infrastructure. A local kind cluster (the
 `infrastructure/`. Argo CD syncs them to the hub, and Crossplane Compositions
 create the cloud resources.
 
-The repository deploys nothing by default. It is set up for GCP, AWS and Azure:
-the clouds are listed in `platform/argocd/root/values.yaml`, and each cloud is
-enabled by adding its Compositions and its XRs. Compositions exist for GCP only so
-far (see [platform/apis/README.md](platform/apis/README.md)).
+The repository deploys nothing by default. Every API has a Composition for GCP,
+AWS and Azure, each tested and checked against the real provider schemas. Only the
+GCP providers and identity are wired into the hub, so GCP is the only cloud a hub
+can deploy to today. See [platform/apis/README.md](platform/apis/README.md) for what
+each cloud creates and what enabling AWS or Azure on a hub takes.
 
 ## How a change reaches the cloud
 
@@ -34,17 +35,19 @@ Compositions), and finally `infrastructure/`.
 
 ## Platform APIs
 
-| Kind | Parameters | On GCP |
-|---|---|---|
-| `XBucket` | `location`, `storageClass`, `versioning`, `forceDestroy`, `deletionPolicy`, `owner` | Private GCS bucket (uniform access, public access prevention enforced) |
-| `XNetwork` | `region`, `cidr`, `podsCidr` + `servicesCidr` (optional, set together), `deletionPolicy` | Custom-mode VPC with one subnet, optional secondary ranges for GKE |
+| Kind | Parameters | GCP | AWS | Azure |
+|---|---|---|---|---|
+| `XBucket` | `location`, `storageClass`, `versioning`, `forceDestroy`, `deletionPolicy`, `owner` | Private GCS bucket | Private S3 bucket | Private Blob container in its own storage account |
+| `XNetwork` | `region`, `cidr`, `podsCidr` + `servicesCidr` (GKE only, set together), `deletionPolicy` | Custom-mode VPC, one subnet | VPC, one private subnet | Virtual network, one subnet |
 
-AWS and Azure have no Compositions yet. The contract for adding them is in
-[platform/apis/README.md](platform/apis/README.md).
+Some parameters mean different things per cloud, and a few are refused where a
+cloud has no equivalent. The table in
+[platform/apis/README.md](platform/apis/README.md#parameters-by-cloud) lists them.
 
 Cloud names are deterministic (`<namespace>-<name>-<hash>`), so a rebuilt hub
-adopts existing resources instead of creating new ones. Setting
-`deletionPolicy: Orphan` keeps the cloud resource when the XR is deleted.
+adopts existing resources instead of creating new ones. AWS VPCs and subnets are
+the exception: AWS assigns their IDs. Setting `deletionPolicy: Orphan` keeps the
+cloud resource when the XR is deleted.
 
 A claim picks its cloud with a `compositionSelector`. This is an example for
 `infrastructure/<env>/<cloud>/`; no claim is checked in:
@@ -71,7 +74,7 @@ spec:
 | `infrastructure/<env>/<cloud>/` | The XRs the hub reconciles (none checked in; see [infrastructure/README.md](infrastructure/README.md)) |
 | `platform/apis/` | XRDs and per-cloud Compositions |
 | `platform/argocd/root/` | App-of-apps Helm chart: pinned chart versions, environments, clouds |
-| `platform/crossplane/` | Crossplane install values, composition functions, GCP provider chart |
+| `platform/crossplane/` | Crossplane install values, composition functions, GCP provider chart, AWS and Azure packages for schema checks only |
 | `platform/policies/` | Kyverno policies for what may live in `infrastructure/` |
 | `bootstrap/local/` | OpenTofu: kind hub, Argo CD, GCP workload identity for the providers |
 | `bootstrap/seed/` | OpenTofu: state bucket and GitHub OIDC identities ([README](bootstrap/seed/README.md)) |

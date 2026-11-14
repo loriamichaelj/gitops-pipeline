@@ -1,0 +1,142 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xbuckets-azure
+  labels:
+    cloud: azure
+spec:
+  compositeTypeRef:
+    apiVersion: platform.gitops-pipeline.io/v1alpha1
+    kind: XBucket
+  mode: Pipeline
+  pipeline:
+    - step: compose
+      functionRef:
+        name: function-kcl
+      requirements:
+        requiredResources:
+          # Hub facts (subscription ID), rendered from the hub's Argo CD cluster Secret.
+          - requirementName: environment
+            apiVersion: apiextensions.crossplane.io/v1beta1
+            kind: EnvironmentConfig
+            name: azure
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            import crypto
+
+            _p = option("params")
+            _xr = _p.oxr
+            _params = _xr.spec?.parameters or {}
+
+            _envs = _p?.requiredResources?.environment or []
+            _subscriptionID = _envs[0]?.Resource?.data?.subscriptionID if _envs else ""
+            assert _subscriptionID, "EnvironmentConfig 'azure' with data.subscriptionID not found: this hub has no Azure identity"
+
+            _ns = _xr.metadata.namespace
+            _name = _xr.metadata.name
+
+            # Every Azure name derives from the subscription, the XR and the XR's kind, so
+            # an XBucket and an XNetwork with the same name never share a resource group.
+            # Deleting a resource group deletes everything in it.
+            _key = "${_subscriptionID}/${_ns}/${_name}/XBucket"
+            _readable = "${_ns}-${_name}".replace(".", "-").lower()
+            _rgName = _readable[:54].rstrip("-") + "-" + crypto.sha256(_key)[:8]
+            # Storage account names: 3 to 24 lowercase letters and digits, globally unique.
+            _accountName = "st" + crypto.sha256(_key)[:22]
+            # Container names: 3 to 63 lowercase letters, digits and hyphens.
+            _containerName = _readable[:63].rstrip("-")
+
+            _region = _params?.location or "eastus"
+            _storageClass = _params?.storageClass or "STANDARD"
+            # Azure has no archive tier on a storage account; archive is per blob.
+            _tier = "Hot" if _storageClass == "STANDARD" else ("Cool" if _storageClass in ["NEARLINE", "COLDLINE"] else "")
+            assert _tier, "storageClass ${_storageClass} has no storage-account equivalent on Azure: use STANDARD, NEARLINE or COLDLINE"
+
+            _orphan = (_params?.deletionPolicy or "Delete") == "Orphan"
+            # Orphan: everything except Delete.
+            _policies = ["Observe", "Create", "Update", "LateInitialize"] if _orphan else ["*"]
+            _versioning = _params?.versioning or False
+
+            _tags = {
+                "env" = _ns.removeprefix("infra-")
+                "cloud" = "azure"
+                "owner" = _params?.owner or "platform"
+                "managed-by" = "crossplane"
+                "repo" = "gitops-pipeline"
+                "xr-namespace" = _ns
+                "xr-name" = _name.replace(".", "-")[:63]
+            }
+
+            _resourceGroup = {
+                apiVersion = "azure.m.upbound.io/v1beta1"
+                kind = "ResourceGroup"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "resource-group"
+                    "crossplane.io/external-name" = _rgName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        location = _region
+                        tags = _tags
+                    }
+                }
+            }
+
+            # Private storage: no public access to blobs, and the account is the only
+            # thing holding data for this bucket.
+            _account = {
+                apiVersion = "storage.azure.m.upbound.io/v1beta1"
+                kind = "Account"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "account"
+                    "crossplane.io/external-name" = _accountName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        location = _region
+                        resourceGroupNameSelector.matchControllerRef = True
+                        accountTier = "Standard"
+                        accountKind = "StorageV2"
+                        accountReplicationType = "LRS"
+                        accessTier = _tier
+                        allowNestedItemsToBePublic = False
+                        blobProperties = {versioningEnabled = _versioning}
+                        tags = _tags
+                    }
+                }
+            }
+
+            _container = {
+                apiVersion = "storage.azure.m.upbound.io/v1beta1"
+                kind = "Container"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "container"
+                    "crossplane.io/external-name" = _containerName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        containerAccessType = "private"
+                        storageAccountIdSelector.matchControllerRef = True
+                    }
+                }
+            }
+
+            _dxr = {
+                **_p.dxr
+                status.bucketName = _containerName
+                status.url = "https://${_accountName}.blob.core.windows.net/${_containerName}"
+            }
+
+            items = [_resourceGroup, _account, _container, _dxr]
+    - step: ready
+      functionRef:
+        name: function-auto-ready

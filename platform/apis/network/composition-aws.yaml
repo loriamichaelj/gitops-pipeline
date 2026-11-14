@@ -1,0 +1,113 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnetworks-aws
+  labels:
+    cloud: aws
+spec:
+  compositeTypeRef:
+    apiVersion: platform.gitops-pipeline.io/v1alpha1
+    kind: XNetwork
+  mode: Pipeline
+  pipeline:
+    - step: compose
+      functionRef:
+        name: function-kcl
+      requirements:
+        requiredResources:
+          # Hub facts (account ID), rendered from the hub's Argo CD cluster Secret.
+          - requirementName: environment
+            apiVersion: apiextensions.crossplane.io/v1beta1
+            kind: EnvironmentConfig
+            name: aws
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            import crypto
+
+            _p = option("params")
+            _xr = _p.oxr
+            _params = _xr.spec?.parameters or {}
+
+            _envs = _p?.requiredResources?.environment or []
+            _accountID = _envs[0]?.Resource?.data?.accountID if _envs else ""
+            assert _accountID, "EnvironmentConfig 'aws' with data.accountID not found: this hub has no AWS identity"
+            # GKE secondary ranges have no AWS equivalent; refuse them rather than drop them.
+            assert not _params?.podsCidr, "podsCidr and servicesCidr are GKE secondary ranges and do not apply on AWS"
+
+            _ns = _xr.metadata.namespace
+            _name = _xr.metadata.name
+
+            # Names are carried in tags: a VPC's identifier is assigned by AWS, so it cannot
+            # be chosen the way GCP and Azure names are. The hash keeps the name unique per
+            # account, which is what the tags are searched by.
+            _hash = crypto.sha256("${_accountID}/${_ns}/${_name}")[:8]
+            _readable = "${_ns}-${_name}".replace(".", "-").lower()
+            _netName = _readable[:54].rstrip("-") + "-" + _hash
+
+            _region = _params?.region or "us-east-1"
+            # The subnet must name one availability zone; the first of the region.
+            _az = _region + "a"
+            _cidr = _params?.cidr or "10.0.0.0/20"
+            _orphan = (_params?.deletionPolicy or "Delete") == "Orphan"
+            # Orphan: everything except Delete.
+            _policies = ["Observe", "Create", "Update", "LateInitialize"] if _orphan else ["*"]
+
+            _tags = {
+                "Name" = _netName
+                "env" = _ns.removeprefix("infra-")
+                "cloud" = "aws"
+                "managed-by" = "crossplane"
+                "repo" = "gitops-pipeline"
+                "xr-namespace" = _ns
+                "xr-name" = _name.replace(".", "-")[:63]
+            }
+
+            _vpc = {
+                apiVersion = "ec2.aws.m.upbound.io/v1beta1"
+                kind = "VPC"
+                metadata.annotations = {"krm.kcl.dev/composition-resource-name" = "vpc"}
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        region = _region
+                        # The VPC and the subnet cover the same range: one private subnet.
+                        cidrBlock = _cidr
+                        enableDnsSupport = True
+                        enableDnsHostnames = True
+                        tags = _tags
+                    }
+                }
+            }
+
+            _subnet = {
+                apiVersion = "ec2.aws.m.upbound.io/v1beta1"
+                kind = "Subnet"
+                metadata.annotations = {"krm.kcl.dev/composition-resource-name" = "subnet"}
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        region = _region
+                        availabilityZone = _az
+                        cidrBlock = _cidr
+                        mapPublicIpOnLaunch = False
+                        vpcIdSelector.matchControllerRef = True
+                        tags = _tags
+                    }
+                }
+            }
+
+            _dxr = {
+                **_p.dxr
+                status.networkName = _netName
+                status.subnetName = _netName
+            }
+
+            items = [_vpc, _subnet, _dxr]
+    - step: ready
+      functionRef:
+        name: function-auto-ready

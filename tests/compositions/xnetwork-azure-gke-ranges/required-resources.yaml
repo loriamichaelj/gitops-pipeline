@@ -1,0 +1,6 @@
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: azure
+data:
+  subscriptionID: 00000000-0000-0000-0000-000000000000

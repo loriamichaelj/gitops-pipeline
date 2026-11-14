@@ -30,10 +30,9 @@ spec:
                   default: {}
                   properties:
                     location:
-                      description: Cloud location (GCS location, e.g. US-CENTRAL1 or US).
+                      description: "Where the bucket lives, in the cloud's own form: a GCS location (US-CENTRAL1), an S3 region (us-east-1) or an Azure region (eastus). Each Composition has a default."
                       type: string
-                      pattern: "^[A-Z0-9-]+$"
-                      default: US-CENTRAL1
+                      pattern: "^[A-Za-z0-9-]+$"
                     storageClass:
                       type: string
                       enum: [STANDARD, NEARLINE, COLDLINE, ARCHIVE]

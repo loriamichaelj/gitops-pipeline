@@ -1,0 +1,139 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: azure.m.upbound.io/v1beta1
+      kind: ResourceGroup
+      name: main-cb7ce67e05c4
+    - apiVersion: network.azure.m.upbound.io/v1beta1
+      kind: Subnet
+      name: main-715c8fc02857
+    - apiVersion: network.azure.m.upbound.io/v1beta1
+      kind: VirtualNetwork
+      name: main-05c5da13ff75
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: network, resource-group, and subnet'
+    reason: Creating
+    status: "False"
+    type: Ready
+  networkName: infra-dev-main-c5519e28
+  subnetName: infra-dev-main-c5519e28
+---
+apiVersion: network.azure.m.upbound.io/v1beta1
+kind: VirtualNetwork
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: network
+    crossplane.io/external-name: infra-dev-main-c5519e28
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-05c5da13ff75
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    addressSpace:
+    - 10.0.0.0/20
+    location: eastus
+    resourceGroupNameSelector:
+      matchControllerRef: true
+    tags:
+      cloud: azure
+      env: dev
+      managed-by: crossplane
+      repo: gitops-pipeline
+      xr-name: main
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: azure.m.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: resource-group
+    crossplane.io/external-name: infra-dev-main-c5519e28
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-cb7ce67e05c4
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    location: eastus
+    tags:
+      cloud: azure
+      env: dev
+      managed-by: crossplane
+      repo: gitops-pipeline
+      xr-name: main
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: network.azure.m.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: subnet
+    crossplane.io/external-name: infra-dev-main-c5519e28
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-715c8fc02857
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    addressPrefixes:
+    - 10.0.0.0/20
+    resourceGroupNameSelector:
+      matchControllerRef: true
+    virtualNetworkNameSelector:
+      matchControllerRef: true
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

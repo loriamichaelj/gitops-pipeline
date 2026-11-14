@@ -11,7 +11,7 @@ userinfo: userinfo.yaml
 results:
   - policy: infrastructure-platform-kinds-only
     isValidatingPolicy: true
-    resources: [infra-dev/good, infra-dev/no-selector, infra-dev/unknown-cloud]
+    resources: [infra-dev/good, infra-dev/good-aws, infra-dev/good-azure, infra-dev/no-selector, infra-dev/unknown-cloud]
     kind: XBucket
     result: pass
   - policy: infrastructure-platform-kinds-only
@@ -21,7 +21,7 @@ results:
     result: fail
   - policy: xr-composition-selector
     isValidatingPolicy: true
-    resources: [infra-dev/good]
+    resources: [infra-dev/good, infra-dev/good-aws, infra-dev/good-azure]
     kind: XBucket
     result: pass
   - policy: xr-composition-selector

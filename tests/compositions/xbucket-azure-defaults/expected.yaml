@@ -1,0 +1,143 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: azure.m.upbound.io/v1beta1
+      kind: ResourceGroup
+      name: artifacts-805882cce266
+    - apiVersion: storage.azure.m.upbound.io/v1beta1
+      kind: Account
+      name: artifacts-ad28f595be6c
+    - apiVersion: storage.azure.m.upbound.io/v1beta1
+      kind: Container
+      name: artifacts-e025c054690f
+status:
+  bucketName: infra-dev-artifacts
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: account, container, and resource-group'
+    reason: Creating
+    status: "False"
+    type: Ready
+  url: https://st19d7d4728c40c0c92a8044.blob.core.windows.net/infra-dev-artifacts
+---
+apiVersion: storage.azure.m.upbound.io/v1beta1
+kind: Account
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: account
+    crossplane.io/external-name: st19d7d4728c40c0c92a8044
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-ad28f595be6c
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    accessTier: Hot
+    accountKind: StorageV2
+    accountReplicationType: LRS
+    accountTier: Standard
+    allowNestedItemsToBePublic: false
+    blobProperties:
+      versioningEnabled: true
+    location: eastus
+    resourceGroupNameSelector:
+      matchControllerRef: true
+    tags:
+      cloud: azure
+      env: dev
+      managed-by: crossplane
+      owner: platform
+      repo: gitops-pipeline
+      xr-name: artifacts
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: storage.azure.m.upbound.io/v1beta1
+kind: Container
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: container
+    crossplane.io/external-name: infra-dev-artifacts
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-e025c054690f
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    containerAccessType: private
+    storageAccountIdSelector:
+      matchControllerRef: true
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: azure.m.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: resource-group
+    crossplane.io/external-name: infra-dev-artifacts-19d7d472
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-805882cce266
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    location: eastus
+    tags:
+      cloud: azure
+      env: dev
+      managed-by: crossplane
+      owner: platform
+      repo: gitops-pipeline
+      xr-name: artifacts
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

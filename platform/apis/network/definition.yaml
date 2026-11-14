@@ -30,10 +30,9 @@ spec:
                   default: {}
                   properties:
                     region:
-                      description: Cloud region of the subnet (e.g. us-central1).
+                      description: "Region of the subnet, in the cloud's own form: us-central1 (GCP), us-east-1 (AWS) or eastus (Azure). Each Composition has a default."
                       type: string
-                      pattern: "^[a-z]+-[a-z]+[0-9]+$"
-                      default: us-central1
+                      pattern: "^[a-z0-9-]+$"
                     cidr:
                       description: IPv4 range of the subnet.
                       type: string

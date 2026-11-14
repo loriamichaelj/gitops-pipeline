@@ -1,0 +1,129 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xbuckets-aws
+  labels:
+    cloud: aws
+spec:
+  compositeTypeRef:
+    apiVersion: platform.gitops-pipeline.io/v1alpha1
+    kind: XBucket
+  mode: Pipeline
+  pipeline:
+    - step: compose
+      functionRef:
+        name: function-kcl
+      requirements:
+        requiredResources:
+          # Hub facts (account ID), rendered from the hub's Argo CD cluster Secret.
+          - requirementName: environment
+            apiVersion: apiextensions.crossplane.io/v1beta1
+            kind: EnvironmentConfig
+            name: aws
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            import crypto
+
+            _p = option("params")
+            _xr = _p.oxr
+            _params = _xr.spec?.parameters or {}
+
+            _envs = _p?.requiredResources?.environment or []
+            _accountID = _envs[0]?.Resource?.data?.accountID if _envs else ""
+            assert _accountID, "EnvironmentConfig 'aws' with data.accountID not found: this hub has no AWS identity"
+
+            _ns = _xr.metadata.namespace
+            _name = _xr.metadata.name
+
+            # S3 names are global and lowercase. The same XR in the same account always
+            # maps to the same bucket, so a rebuilt hub adopts it instead of creating one.
+            _hash = crypto.sha256("${_accountID}/${_ns}/${_name}")[:8]
+            _readable = "${_ns}-${_name}".replace(".", "-").lower()
+            _bucketName = _readable[:54].rstrip("-") + "-" + _hash
+
+            _region = _params?.location or "us-east-1"
+            _storageClass = _params?.storageClass or "STANDARD"
+            # An S3 bucket has no storage class of its own; objects choose theirs. Refuse
+            # the other classes rather than accept a value that does nothing.
+            assert _storageClass == "STANDARD", "storageClass ${_storageClass} has no bucket-level equivalent on AWS: only STANDARD"
+
+            _orphan = (_params?.deletionPolicy or "Delete") == "Orphan"
+            # Orphan: everything except Delete.
+            _policies = ["Observe", "Create", "Update", "LateInitialize"] if _orphan else ["*"]
+            _versioning = _params?.versioning or False
+
+            _tags = {
+                "env" = _ns.removeprefix("infra-")
+                "cloud" = "aws"
+                "owner" = _params?.owner or "platform"
+                "managed-by" = "crossplane"
+                "repo" = "gitops-pipeline"
+                "xr-namespace" = _ns
+                "xr-name" = _name.replace(".", "-")[:63]
+            }
+
+            _bucket = {
+                apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                kind = "Bucket"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "bucket"
+                    "crossplane.io/external-name" = _bucketName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        region = _region
+                        forceDestroy = _params?.forceDestroy or False
+                        tags = _tags
+                    }
+                }
+            }
+
+            # Private: every form of public access is blocked.
+            _publicAccessBlock = {
+                apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                kind = "BucketPublicAccessBlock"
+                metadata.annotations = {"krm.kcl.dev/composition-resource-name" = "public-access-block"}
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        region = _region
+                        bucketSelector.matchControllerRef = True
+                        blockPublicAcls = True
+                        blockPublicPolicy = True
+                        ignorePublicAcls = True
+                        restrictPublicBuckets = True
+                    }
+                }
+            }
+
+            _versioningConfig = {
+                apiVersion = "s3.aws.m.upbound.io/v1beta1"
+                kind = "BucketVersioning"
+                metadata.annotations = {"krm.kcl.dev/composition-resource-name" = "versioning"}
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        region = _region
+                        bucketSelector.matchControllerRef = True
+                        versioningConfiguration = {status = "Enabled" if _versioning else "Suspended"}
+                    }
+                }
+            }
+
+            _dxr = {
+                **_p.dxr
+                status.bucketName = _bucketName
+                status.url = "s3://${_bucketName}"
+            }
+
+            items = [_bucket, _publicAccessBlock, _versioningConfig, _dxr]
+    - step: ready
+      functionRef:
+        name: function-auto-ready

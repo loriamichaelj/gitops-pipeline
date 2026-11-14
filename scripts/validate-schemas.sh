@@ -14,6 +14,7 @@ xp_version="v$(yq -r .crossplane.chartVersion platform/argocd/root/values.yaml)"
 
 # Kinds without a public schema, checked by crossplane resource validate below.
 crossplane_validated=XBucket,Bucket,XNetwork,Network,Subnetwork,ClusterProviderConfig
+crossplane_validated+=,BucketPublicAccessBlock,BucketVersioning,VPC,Subnet,ResourceGroup,Account,Container,VirtualNetwork
 # CustomResourceDefinitions ship unmodified in upstream charts, and
 # kubernetes-json-schema publishes no strict schema for them.
 
@@ -31,7 +32,14 @@ echo "== crossplane resource validate"
 ext=rendered/extensions
 rm -rf "$ext"
 mkdir -p "$ext"
-yq 'select(.kind == "Provider")' rendered/crossplane-providers-gcp.yaml >"$ext/providers.yaml"
+# Schema packages for AWS and Azure: validation only, never installed on a hub.
+{
+  yq 'select(.kind == "Provider")' rendered/crossplane-providers-gcp.yaml
+  for f in platform/crossplane/schema-packages/*.yaml; do
+    echo "---"
+    cat "$f"
+  done
+} >"$ext/providers.yaml"
 cp platform/crossplane/functions/functions.yaml "$ext/functions.yaml"
 for xrd in platform/apis/*/definition.yaml; do
   cp "$xrd" "$ext/$(basename "$(dirname "$xrd")")-definition.yaml"

@@ -1,0 +1,15 @@
+# A versioned private container in Azure Blob Storage, with the region and owner set.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: azure
+  parameters:
+    location: eastus
+    versioning: true
+    owner: platform
