@@ -1,0 +1,16 @@
+# First claim: a custom-mode VPC with one subnet (free). Orphan keeps both if this XR
+# is deleted; switch to Delete once the create and delete loop has been shown to work.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    region: us-central1
+    cidr: 10.10.0.0/20
+    deletionPolicy: Orphan

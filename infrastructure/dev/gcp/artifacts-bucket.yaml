@@ -1,0 +1,16 @@
+# First claim: an empty private GCS bucket. Orphan keeps the bucket if this XR is
+# deleted; switch to Delete once the create and delete loop has been shown to work.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: gcp
+  parameters:
+    location: US-CENTRAL1
+    deletionPolicy: Orphan
+    owner: platform
