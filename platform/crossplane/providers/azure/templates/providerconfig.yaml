@@ -1,0 +1,17 @@
+{{- /*
+Default config for namespaced (*.azure.m.upbound.io) managed resources. The token
+file comes from each provider pod's projected volume (see runtimeconfigs.yaml).
+*/ -}}
+apiVersion: azure.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  tenantID: {{ include "azure.required" (dict "name" "tenantID" "value" .Values.tenantID) | quote }}
+  subscriptionID: {{ include "azure.required" (dict "name" "subscriptionID" "value" .Values.subscriptionID) | quote }}
+  clientID: {{ include "azure.required" (dict "name" "clientID" "value" .Values.clientID) | quote }}
+  oidcTokenFilePath: /var/run/secrets/azure/token
+  credentials:
+    source: OIDCTokenFile

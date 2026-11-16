@@ -32,3 +32,8 @@ output "oidc_jwks" {
   description = "Public signing keys for service-account tokens, as a JSON string."
   value       = data.external.oidc.result.jwks
 }
+
+output "oidc_discovery" {
+  description = "The cluster's OpenID discovery document, as a JSON string."
+  value       = data.external.oidc.result.discovery
+}

@@ -1,0 +1,51 @@
+{{- /*
+Wave -4: Azure providers, runtime configs and ClusterProviderConfig, for every hub whose
+cluster Secret says it has Azure identity. Environment facts come from the cluster
+Secret's annotations; nothing account-specific is committed.
+
+The inner {{`{{ }}`}} expressions are ApplicationSet go-templates, escaped from Helm.
+*/ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: crossplane-providers-azure
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: hub
+            azure-identity: federated
+  template:
+    metadata:
+      name: {{`'crossplane-providers-azure-{{ .name }}'`}}
+    spec:
+      project: platform
+      source:
+        repoURL: {{ .Values.repoURL }}
+        targetRevision: {{ .Values.targetRevision }}
+        path: platform/crossplane/providers/azure
+        helm:
+          releaseName: crossplane-providers-azure
+          valuesObject:
+            tenantID: {{`'{{ index .metadata.annotations "azure.gitops-pipeline/tenant-id" }}'`}}
+            subscriptionID: {{`'{{ index .metadata.annotations "azure.gitops-pipeline/subscription-id" }}'`}}
+            clientID: {{`'{{ index .metadata.annotations "azure.gitops-pipeline/client-id" }}'`}}
+            audience: {{`'{{ index .metadata.annotations "azure.gitops-pipeline/audience" }}'`}}
+      destination:
+        server: {{`'{{ .server }}'`}}
+        namespace: {{ .Values.crossplane.namespace }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # ClusterProviderConfig's CRD appears only once the family provider is installed.
+          - SkipDryRunOnMissingResource=true
+        retry:
+          {{- toYaml .Values.retry | nindent 10 }}

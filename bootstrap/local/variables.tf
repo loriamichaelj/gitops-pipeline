@@ -47,3 +47,38 @@ variable "gcp_pool_id" {
   type        = string
   default     = "gitops-hub-local"
 }
+
+variable "oidc_issuer_url" {
+  description = <<-EOT
+    Public HTTPS URL the hub signs service-account tokens as, with no trailing slash,
+    for example https://<owner>.github.io/<repo>/oidc/<cluster_name>. Required for AWS
+    and Azure, which fetch the discovery document and keys from it; GCP does not need
+    it. Changing it recreates the cluster. After apply, publish ./oidc (see README).
+  EOT
+  type        = string
+  default     = null
+}
+
+variable "aws_enabled" {
+  description = "Create the AWS identity (IAM OIDC provider and one role per provider family). Needs oidc_issuer_url and AWS credentials."
+  type        = bool
+  default     = false
+}
+
+variable "aws_region" {
+  description = "Region for the AWS provider. IAM is global; this only picks the API endpoint."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "azure_subscription_id" {
+  description = "Azure subscription for Crossplane. Leave null for no Azure identity. Needs oidc_issuer_url and an Azure login."
+  type        = string
+  default     = null
+}
+
+variable "azure_location" {
+  description = "Region of the resource group that holds the managed identity."
+  type        = string
+  default     = "eastus"
+}

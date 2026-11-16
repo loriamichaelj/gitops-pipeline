@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Emit the cluster's service-account issuer and JWKS for an OpenTofu external data source.
-# Input (stdin JSON): kubeconfig, context. Output (stdout JSON): issuer, jwks (JSON string).
+# Input (stdin JSON): kubeconfig, context. Output (stdout JSON): issuer, jwks and discovery (JSON strings).
 set -euo pipefail
 
 input=$(cat)
@@ -9,7 +9,9 @@ context=$(jq -r '.context' <<<"$input")
 
 kc() { kubectl --kubeconfig "$kubeconfig" --context "$context" "$@"; }
 
-issuer=$(kc get --raw /.well-known/openid-configuration | jq -r '.issuer')
+discovery=$(kc get --raw /.well-known/openid-configuration | jq -c '.')
+issuer=$(jq -r '.issuer' <<<"$discovery")
 jwks=$(kc get --raw /openid/v1/jwks | jq -c '.')
 
-jq -n --arg issuer "$issuer" --arg jwks "$jwks" '{issuer: $issuer, jwks: $jwks}'
+jq -n --arg issuer "$issuer" --arg jwks "$jwks" --arg discovery "$discovery" \
+  '{issuer: $issuer, jwks: $jwks, discovery: $discovery}'

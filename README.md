@@ -6,9 +6,9 @@ A GitOps platform for multi-cloud infrastructure. A local kind cluster (the
 create the cloud resources.
 
 The repository deploys nothing by default. Every API has a Composition for GCP,
-AWS and Azure, each tested and checked against the real provider schemas. Only the
-GCP providers and identity are wired into the hub, so GCP is the only cloud a hub
-can deploy to today. See [platform/apis/README.md](platform/apis/README.md) for what
+AWS and Azure, each tested and checked against the real provider schemas. All three clouds have a
+provider chart, but only GCP's identity exists, so GCP is the only cloud a hub can
+deploy to today. See [platform/apis/README.md](platform/apis/README.md) for what
 each cloud creates and what enabling AWS or Azure on a hub takes.
 
 ## How a change reaches the cloud
@@ -74,7 +74,7 @@ spec:
 | `infrastructure/<env>/<cloud>/` | The XRs the hub reconciles (none checked in; see [infrastructure/README.md](infrastructure/README.md)) |
 | `platform/apis/` | XRDs and per-cloud Compositions |
 | `platform/argocd/root/` | App-of-apps Helm chart: pinned chart versions, environments, clouds |
-| `platform/crossplane/` | Crossplane install values, composition functions, GCP and AWS provider charts, Azure package for schema checks only |
+| `platform/crossplane/` | Crossplane install values, composition functions, GCP, AWS and Azure provider charts |
 | `platform/policies/` | Kyverno policies for what may live in `infrastructure/` |
 | `bootstrap/local/` | OpenTofu: kind hub, Argo CD, GCP workload identity for the providers |
 | `bootstrap/seed/` | OpenTofu: state bucket and GitHub OIDC identities ([README](bootstrap/seed/README.md)) |
@@ -125,6 +125,27 @@ export KUBECONFIG=$(tofu output -raw kubeconfig)
 `tofu output argocd_ui` and `tofu output argocd_admin_password` print the
 commands for reaching the Argo CD UI. To test a feature branch on the hub before
 opening a PR, set `target_revision` in `terraform.tfvars`.
+
+### Give the hub AWS or Azure identity
+
+GCP trusts the hub from an uploaded copy of its signing keys. AWS and Azure fetch the
+keys from the cluster's issuer URL over public HTTPS, so the hub's issuer has to be
+published first. Nothing in this section runs by default, and none of it needs a paid
+resource until you enable a cloud.
+
+1. Pick the URL a static host will serve, for example a GitHub Pages path
+   `https://<owner>.github.io/<repo>/oidc/gitops-hub`, and set `oidc_issuer_url` to it.
+   The cluster then signs tokens as that issuer, so this recreates the hub.
+2. `tofu apply` writes `bootstrap/local/oidc/` (the discovery document, the JWKS and
+   `.nojekyll`: public keys only, gitignored). Publish that directory's contents at the
+   URL. Check `curl <issuer>/.well-known/openid-configuration` and `<issuer>/openid/v1/jwks`.
+3. Set `aws_enabled = true` and/or `azure_subscription_id`, with an AWS or Azure login
+   in your shell, and apply again. This creates the IAM OIDC provider and roles, or the
+   managed identity and role assignment, and labels the hub `aws-identity=federated`
+   or `azure-identity=federated`.
+
+Recreating the cluster changes its keys: publish `oidc/` again, or the clouds reject
+its tokens.
 
 ## Workflow
 

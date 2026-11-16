@@ -1,0 +1,40 @@
+{{- /*
+Federated identity without Secrets:
+  - the provider pod runs as a fixed service account, provider-azure-<family>,
+  - a projected token for that account (audience = api://AzureADTokenExchange) is
+    exchanged by Entra ID against a federated credential on the managed identity,
+  - the ClusterProviderConfig points the provider at the token file.
+*/ -}}
+{{- range $family := .Values.families }}
+{{- $name := printf "provider-azure-%s" $family }}
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: {{ $name }}
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              volumeMounts:
+                - name: azure-token
+                  mountPath: /var/run/secrets/azure
+                  readOnly: true
+          volumes:
+            - name: azure-token
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      audience: {{ $.Values.audience }}
+                      path: token
+                      expirationSeconds: 3600
+{{- end }}
