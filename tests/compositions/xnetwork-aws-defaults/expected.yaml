@@ -1,0 +1,108 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: main
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: ec2.aws.m.upbound.io/v1beta1
+      kind: Subnet
+      name: main-715c8fc02857
+    - apiVersion: ec2.aws.m.upbound.io/v1beta1
+      kind: VPC
+      name: main-b74954bef92a
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: subnet, vpc'
+    reason: Creating
+    status: "False"
+    type: Ready
+  networkName: infra-dev-main-8692d52e
+  subnetName: infra-dev-main-8692d52e
+---
+apiVersion: ec2.aws.m.upbound.io/v1beta1
+kind: Subnet
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: subnet
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-715c8fc02857
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    availabilityZone: us-east-1a
+    cidrBlock: 10.0.0.0/20
+    mapPublicIpOnLaunch: false
+    region: us-east-1
+    tags:
+      Name: infra-dev-main-8692d52e
+      cloud: aws
+      env: dev
+      managed-by: crossplane
+      repo: gitops-pipeline
+      xr-name: main
+      xr-namespace: infra-dev
+    vpcIdSelector:
+      matchControllerRef: true
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: ec2.aws.m.upbound.io/v1beta1
+kind: VPC
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: vpc
+  generateName: main-
+  labels:
+    crossplane.io/composite: main
+  name: main-b74954bef92a
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XNetwork
+    name: main
+    uid: a9db3929-dd83-5ef3-b767-75f8616d2d40
+spec:
+  forProvider:
+    cidrBlock: 10.0.0.0/20
+    enableDnsHostnames: true
+    enableDnsSupport: true
+    region: us-east-1
+    tags:
+      Name: infra-dev-main-8692d52e
+      cloud: aws
+      env: dev
+      managed-by: crossplane
+      repo: gitops-pipeline
+      xr-name: main
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

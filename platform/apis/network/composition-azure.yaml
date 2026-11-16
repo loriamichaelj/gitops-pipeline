@@ -1,0 +1,127 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnetworks-azure
+  labels:
+    cloud: azure
+spec:
+  compositeTypeRef:
+    apiVersion: platform.gitops-pipeline.io/v1alpha1
+    kind: XNetwork
+  mode: Pipeline
+  pipeline:
+    - step: compose
+      functionRef:
+        name: function-kcl
+      requirements:
+        requiredResources:
+          # Hub facts (subscription ID), rendered from the hub's Argo CD cluster Secret.
+          - requirementName: environment
+            apiVersion: apiextensions.crossplane.io/v1beta1
+            kind: EnvironmentConfig
+            name: azure
+      input:
+        apiVersion: krm.kcl.dev/v1alpha1
+        kind: KCLInput
+        spec:
+          source: |
+            import crypto
+
+            _p = option("params")
+            _xr = _p.oxr
+            _params = _xr.spec?.parameters or {}
+
+            _envs = _p?.requiredResources?.environment or []
+            _subscriptionID = _envs[0]?.Resource?.data?.subscriptionID if _envs else ""
+            assert _subscriptionID, "EnvironmentConfig 'azure' with data.subscriptionID not found: this hub has no Azure identity"
+            # GKE secondary ranges have no Azure equivalent; refuse them rather than drop them.
+            assert not _params?.podsCidr, "podsCidr and servicesCidr are GKE secondary ranges and do not apply on Azure"
+
+            _ns = _xr.metadata.namespace
+            _name = _xr.metadata.name
+
+            # The resource group, network and subnet share one name. The kind is part of the
+            # key, so an XNetwork never shares a resource group with an XBucket of the same name.
+            _key = "${_subscriptionID}/${_ns}/${_name}/XNetwork"
+            _readable = "${_ns}-${_name}".replace(".", "-").lower()
+            _netName = _readable[:54].rstrip("-") + "-" + crypto.sha256(_key)[:8]
+
+            _region = _params?.region or "eastus"
+            _cidr = _params?.cidr or "10.0.0.0/20"
+            _orphan = (_params?.deletionPolicy or "Delete") == "Orphan"
+            # Orphan: everything except Delete.
+            _policies = ["Observe", "Create", "Update", "LateInitialize"] if _orphan else ["*"]
+
+            _tags = {
+                "env" = _ns.removeprefix("infra-")
+                "cloud" = "azure"
+                "managed-by" = "crossplane"
+                "repo" = "gitops-pipeline"
+                "xr-namespace" = _ns
+                "xr-name" = _name.replace(".", "-")[:63]
+            }
+
+            _resourceGroup = {
+                apiVersion = "azure.m.upbound.io/v1beta1"
+                kind = "ResourceGroup"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "resource-group"
+                    "crossplane.io/external-name" = _netName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        location = _region
+                        tags = _tags
+                    }
+                }
+            }
+
+            _network = {
+                apiVersion = "network.azure.m.upbound.io/v1beta1"
+                kind = "VirtualNetwork"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "network"
+                    "crossplane.io/external-name" = _netName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        location = _region
+                        addressSpace = [_cidr]
+                        resourceGroupNameSelector.matchControllerRef = True
+                        tags = _tags
+                    }
+                }
+            }
+
+            _subnet = {
+                apiVersion = "network.azure.m.upbound.io/v1beta1"
+                kind = "Subnet"
+                metadata.annotations = {
+                    "krm.kcl.dev/composition-resource-name" = "subnet"
+                    "crossplane.io/external-name" = _netName
+                }
+                spec = {
+                    managementPolicies = _policies
+                    providerConfigRef = {kind = "ClusterProviderConfig", name = "default"}
+                    forProvider = {
+                        addressPrefixes = [_cidr]
+                        resourceGroupNameSelector.matchControllerRef = True
+                        virtualNetworkNameSelector.matchControllerRef = True
+                    }
+                }
+            }
+
+            _dxr = {
+                **_p.dxr
+                status.networkName = _netName
+                status.subnetName = _netName
+            }
+
+            items = [_resourceGroup, _network, _subnet, _dxr]
+    - step: ready
+      functionRef:
+        name: function-auto-ready

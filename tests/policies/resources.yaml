@@ -12,6 +12,28 @@ spec:
 apiVersion: platform.gitops-pipeline.io/v1alpha1
 kind: XBucket
 metadata:
+  name: good-aws
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: aws
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: good-azure
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: azure
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
   name: no-selector
   namespace: infra-dev
 spec: {}

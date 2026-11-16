@@ -1,0 +1,1 @@
+GKE secondary ranges and do not apply on AWS

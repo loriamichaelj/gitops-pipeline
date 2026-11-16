@@ -1,0 +1,1 @@
+has no storage-account equivalent on Azure

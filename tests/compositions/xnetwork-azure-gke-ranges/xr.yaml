@@ -1,0 +1,15 @@
+# Pod and service ranges are GKE-only: refused on Azure.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XNetwork
+metadata:
+  name: spokes
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: azure
+  parameters:
+    region: eastus
+    podsCidr: 10.64.0.0/14
+    servicesCidr: 10.68.0.0/20

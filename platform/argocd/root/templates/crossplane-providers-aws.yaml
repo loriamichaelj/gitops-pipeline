@@ -1,0 +1,54 @@
+{{- /*
+Wave -4: AWS providers, runtime configs and ClusterProviderConfig, for every hub whose
+cluster Secret says it has AWS identity. Environment facts come from the cluster
+Secret's annotations; nothing account-specific is committed.
+
+The inner {{`{{ }}`}} expressions are ApplicationSet go-templates, escaped from Helm.
+*/ -}}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: crossplane-providers-aws
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: hub
+            aws-identity: federated
+  template:
+    metadata:
+      name: {{`'crossplane-providers-aws-{{ .name }}'`}}
+    spec:
+      project: platform
+      source:
+        repoURL: {{ .Values.repoURL }}
+        targetRevision: {{ .Values.targetRevision }}
+        path: platform/crossplane/providers/aws
+        helm:
+          releaseName: crossplane-providers-aws
+          valuesObject:
+            accountID: {{`'{{ index .metadata.annotations "aws.gitops-pipeline/account-id" }}'`}}
+            audience: {{`'{{ index .metadata.annotations "aws.gitops-pipeline/audience" }}'`}}
+            families:
+              s3:
+                roleARN: {{`'{{ index .metadata.annotations "aws.gitops-pipeline/role.provider-aws-s3" }}'`}}
+              ec2:
+                roleARN: {{`'{{ index .metadata.annotations "aws.gitops-pipeline/role.provider-aws-ec2" }}'`}}
+      destination:
+        server: {{`'{{ .server }}'`}}
+        namespace: {{ .Values.crossplane.namespace }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          # ClusterProviderConfig's CRD appears only once the family provider is installed.
+          - SkipDryRunOnMissingResource=true
+        retry:
+          {{- toYaml .Values.retry | nindent 10 }}

@@ -1,0 +1,14 @@
+# Archive storage is per object on S3, so an archive bucket is refused.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: cold
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: aws
+  parameters:
+    location: us-east-1
+    storageClass: ARCHIVE

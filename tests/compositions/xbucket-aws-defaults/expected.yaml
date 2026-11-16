@@ -1,0 +1,133 @@
+---
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    resourceRefs:
+    - apiVersion: s3.aws.m.upbound.io/v1beta1
+      kind: BucketPublicAccessBlock
+      name: artifacts-e6a0b8310c2a
+    - apiVersion: s3.aws.m.upbound.io/v1beta1
+      kind: BucketVersioning
+      name: artifacts-38f545644936
+    - apiVersion: s3.aws.m.upbound.io/v1beta1
+      kind: Bucket
+      name: artifacts-5d24e9f7f293
+status:
+  bucketName: infra-dev-artifacts-abe93384
+  conditions:
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: WatchCircuitClosed
+    status: "True"
+    type: Responsive
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    reason: ReconcileSuccess
+    status: "True"
+    type: Synced
+  - lastTransitionTime: "2024-01-01T00:00:00Z"
+    message: 'Unready resources: bucket, public-access-block, and versioning'
+    reason: Creating
+    status: "False"
+    type: Ready
+  url: s3://infra-dev-artifacts-abe93384
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: bucket
+    crossplane.io/external-name: infra-dev-artifacts-abe93384
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-5d24e9f7f293
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    forceDestroy: false
+    region: us-east-1
+    tags:
+      cloud: aws
+      env: dev
+      managed-by: crossplane
+      owner: platform
+      repo: gitops-pipeline
+      xr-name: artifacts
+      xr-namespace: infra-dev
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: BucketPublicAccessBlock
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: public-access-block
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-e6a0b8310c2a
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    blockPublicAcls: true
+    blockPublicPolicy: true
+    bucketSelector:
+      matchControllerRef: true
+    ignorePublicAcls: true
+    region: us-east-1
+    restrictPublicBuckets: true
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: BucketVersioning
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: versioning
+  generateName: artifacts-
+  labels:
+    crossplane.io/composite: artifacts
+  name: artifacts-38f545644936
+  namespace: infra-dev
+  ownerReferences:
+  - apiVersion: platform.gitops-pipeline.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XBucket
+    name: artifacts
+    uid: f9f483d2-6fc1-59ab-b986-d65632ab5bff
+spec:
+  forProvider:
+    bucketSelector:
+      matchControllerRef: true
+    region: us-east-1
+    versioningConfiguration:
+      status: Enabled
+  managementPolicies:
+  - '*'
+  providerConfigRef:
+    kind: ClusterProviderConfig
+    name: default

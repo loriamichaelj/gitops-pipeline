@@ -1,0 +1,12 @@
+{{- /*
+Hub facts for AWS compositions, read as a required resource. Rendered from the
+hub's Argo CD cluster Secret, so nothing account-specific is committed.
+*/ -}}
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: aws
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  accountID: {{ include "aws.required" (dict "name" "accountID" "value" .Values.accountID) | quote }}

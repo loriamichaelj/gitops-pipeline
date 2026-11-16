@@ -1,0 +1,15 @@
+# A versioned private bucket in S3, with the region and owner set and the rest defaulted.
+apiVersion: platform.gitops-pipeline.io/v1alpha1
+kind: XBucket
+metadata:
+  name: artifacts
+  namespace: infra-dev
+spec:
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        cloud: aws
+  parameters:
+    location: us-east-1
+    versioning: true
+    owner: platform

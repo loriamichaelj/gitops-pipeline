@@ -14,6 +14,7 @@ xp_version="v$(yq -r .crossplane.chartVersion platform/argocd/root/values.yaml)"
 
 # Kinds without a public schema, checked by crossplane resource validate below.
 crossplane_validated=XBucket,Bucket,XNetwork,Network,Subnetwork,ClusterProviderConfig
+crossplane_validated+=,BucketPublicAccessBlock,BucketVersioning,VPC,Subnet,ResourceGroup,Account,Container,VirtualNetwork
 # CustomResourceDefinitions ship unmodified in upstream charts, and
 # kubernetes-json-schema publishes no strict schema for them.
 
@@ -24,14 +25,24 @@ kubeconform -strict -summary -output text \
   -schema-location "$crd_catalog/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
   -skip "$crossplane_validated,CustomResourceDefinition" \
   rendered/root.yaml rendered/argocd.yaml rendered/crossplane.yaml \
-  rendered/crossplane-providers-gcp.yaml \
+  rendered/crossplane-providers-gcp.yaml rendered/crossplane-providers-aws.yaml \
   platform/crossplane/functions platform/apis platform/policies infrastructure
 
 echo "== crossplane resource validate"
 ext=rendered/extensions
 rm -rf "$ext"
 mkdir -p "$ext"
-yq 'select(.kind == "Provider")' rendered/crossplane-providers-gcp.yaml >"$ext/providers.yaml"
+# Providers the hub installs (GCP, AWS), plus schema packages for the clouds no hub
+# installs yet (Azure): validation only.
+{
+  yq 'select(.kind == "Provider")' rendered/crossplane-providers-gcp.yaml
+  echo "---"
+  yq 'select(.kind == "Provider")' rendered/crossplane-providers-aws.yaml
+  for f in platform/crossplane/schema-packages/*.yaml; do
+    echo "---"
+    cat "$f"
+  done
+} >"$ext/providers.yaml"
 cp platform/crossplane/functions/functions.yaml "$ext/functions.yaml"
 for xrd in platform/apis/*/definition.yaml; do
   cp "$xrd" "$ext/$(basename "$(dirname "$xrd")")-definition.yaml"
@@ -40,6 +51,8 @@ done
 resources=rendered/crossplane-resources.yaml
 {
   yq 'select(.kind != "ConfigMap")' rendered/crossplane-providers-gcp.yaml
+  echo "---"
+  yq 'select(.kind != "ConfigMap")' rendered/crossplane-providers-aws.yaml
   find platform/apis infrastructure rendered/compositions -name '*.yaml' ! -name 'definition.yaml' \
     -exec sh -c 'for f; do echo "---"; cat "$f"; done' _ {} +
 } >"$resources"

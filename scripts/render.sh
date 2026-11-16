@@ -34,6 +34,22 @@ if grep -q provider-gcp-compute <<<"$partial"; then
   exit 1
 fi
 
+helm template crossplane-providers-aws platform/crossplane/providers/aws \
+  --namespace crossplane-system \
+  --set accountID=111122223333 \
+  --set families.s3.roleARN=arn:aws:iam::111122223333:role/xp-aws-s3-example \
+  --set families.ec2.roleARN=arn:aws:iam::111122223333:role/xp-aws-ec2-example \
+  >"$out/crossplane-providers-aws.yaml"
+
+partial=$(helm template crossplane-providers-aws platform/crossplane/providers/aws \
+  --namespace crossplane-system \
+  --set accountID=111122223333 \
+  --set families.s3.roleARN=arn:aws:iam::111122223333:role/xp-aws-s3-example)
+if grep -q provider-aws-ec2 <<<"$partial"; then
+  echo "render: a family without a role must not be rendered" >&2
+  exit 1
+fi
+
 helm template argocd argo-cd \
   --repo "$(val .argocd.chartRepo)" --version "$(val .argocd.chartVersion)" \
   --namespace argocd -f platform/argocd/values.yaml >"$out/argocd.yaml"
