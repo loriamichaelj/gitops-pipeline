@@ -1,0 +1,12 @@
+{{- /*
+Hub facts for Azure compositions, read as a required resource. Rendered from the
+hub's Argo CD cluster Secret, so nothing account-specific is committed.
+*/ -}}
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: azure
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  subscriptionID: {{ include "azure.required" (dict "name" "subscriptionID" "value" .Values.subscriptionID) | quote }}

@@ -3,3 +3,10 @@ gcp_project_id = "your-gcp-project-id"
 
 # Test a feature branch on the hub before opening a PR.
 # target_revision = "my-feature-branch"
+
+# AWS and Azure fetch the hub's token-signing keys over public HTTPS (GCP does not).
+# Host bootstrap/local/oidc/ at this URL (GitHub Pages works; see the README), then
+# enable a cloud. Changing the issuer recreates the cluster.
+# oidc_issuer_url       = "https://<owner>.github.io/<repo>/oidc/gitops-hub"
+# aws_enabled           = true
+# azure_subscription_id = "00000000-0000-0000-0000-000000000000"

@@ -3,7 +3,6 @@
 # Defaults are empty on purpose.
 
 registry: xpkg.upbound.io/upbound
-# Keep in step with platform/crossplane/schema-packages/aws.yaml.
 version: v2.9.4
 
 accountID: ""

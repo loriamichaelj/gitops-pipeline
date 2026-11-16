@@ -10,6 +10,19 @@ resource "kind_cluster" "this" {
 
     node {
       role = "control-plane"
+
+      # With a public issuer URL the API server signs tokens as that issuer and
+      # advertises its JWKS there. AWS and Azure fetch both over HTTPS, unlike GCP,
+      # which accepts an uploaded copy. Changing it means recreating the cluster.
+      kubeadm_config_patches = var.oidc_issuer_url == null ? null : [yamlencode({
+        kind = "ClusterConfiguration"
+        apiServer = {
+          extraArgs = {
+            "service-account-issuer"   = var.oidc_issuer_url
+            "service-account-jwks-uri" = "${var.oidc_issuer_url}/openid/v1/jwks"
+          }
+        }
+      })]
     }
   }
 }

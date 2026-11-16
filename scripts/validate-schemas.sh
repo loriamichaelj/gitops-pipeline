@@ -26,22 +26,20 @@ kubeconform -strict -summary -output text \
   -skip "$crossplane_validated,CustomResourceDefinition" \
   rendered/root.yaml rendered/argocd.yaml rendered/crossplane.yaml \
   rendered/crossplane-providers-gcp.yaml rendered/crossplane-providers-aws.yaml \
+  rendered/crossplane-providers-azure.yaml \
   platform/crossplane/functions platform/apis platform/policies infrastructure
 
 echo "== crossplane resource validate"
 ext=rendered/extensions
 rm -rf "$ext"
 mkdir -p "$ext"
-# Providers the hub installs (GCP, AWS), plus schema packages for the clouds no hub
-# installs yet (Azure): validation only.
+# Providers the hub installs, from the rendered provider charts.
 {
   yq 'select(.kind == "Provider")' rendered/crossplane-providers-gcp.yaml
   echo "---"
   yq 'select(.kind == "Provider")' rendered/crossplane-providers-aws.yaml
-  for f in platform/crossplane/schema-packages/*.yaml; do
-    echo "---"
-    cat "$f"
-  done
+  echo "---"
+  yq 'select(.kind == "Provider")' rendered/crossplane-providers-azure.yaml
 } >"$ext/providers.yaml"
 cp platform/crossplane/functions/functions.yaml "$ext/functions.yaml"
 for xrd in platform/apis/*/definition.yaml; do
@@ -53,6 +51,8 @@ resources=rendered/crossplane-resources.yaml
   yq 'select(.kind != "ConfigMap")' rendered/crossplane-providers-gcp.yaml
   echo "---"
   yq 'select(.kind != "ConfigMap")' rendered/crossplane-providers-aws.yaml
+  echo "---"
+  yq 'select(.kind != "ConfigMap")' rendered/crossplane-providers-azure.yaml
   find platform/apis infrastructure rendered/compositions -name '*.yaml' ! -name 'definition.yaml' \
     -exec sh -c 'for f; do echo "---"; cat "$f"; done' _ {} +
 } >"$resources"

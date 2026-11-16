@@ -1,0 +1,23 @@
+# Environment facts (tenantID, subscriptionID, clientID) are injected by the
+# crossplane-providers-azure ApplicationSet from the hub's Argo CD cluster Secret.
+# Defaults are empty on purpose.
+
+registry: xpkg.upbound.io/upbound
+version: v2.8.4
+
+tenantID: ""
+subscriptionID: ""
+# Client ID of the user-assigned managed identity (or app registration) that the
+# providers act as. Unlike AWS and GCP, Azure keeps the client ID in the shared
+# ClusterProviderConfig, so every family uses this one identity. Each family's
+# Kubernetes service account still needs its own federated credential on it.
+clientID: ""
+# Audience the projected service-account token carries; Entra ID's fixed value.
+audience: api://AzureADTokenExchange
+
+# One provider per family. Each runs as Kubernetes service account
+# provider-azure-<family>.
+families:
+  - storage
+  - network
+  - resources

@@ -50,6 +50,13 @@ if grep -q provider-aws-ec2 <<<"$partial"; then
   exit 1
 fi
 
+helm template crossplane-providers-azure platform/crossplane/providers/azure \
+  --namespace crossplane-system \
+  --set tenantID=00000000-0000-0000-0000-000000000001 \
+  --set subscriptionID=00000000-0000-0000-0000-000000000000 \
+  --set clientID=00000000-0000-0000-0000-000000000002 \
+  >"$out/crossplane-providers-azure.yaml"
+
 helm template argocd argo-cd \
   --repo "$(val .argocd.chartRepo)" --version "$(val .argocd.chartVersion)" \
   --namespace argocd -f platform/argocd/values.yaml >"$out/argocd.yaml"

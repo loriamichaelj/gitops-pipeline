@@ -93,3 +93,6 @@ out/
 tmp/
 *.log
 gitleaks-report.*
+
+# --- Generated hub issuer files (public keys; change when the cluster is recreated)
+bootstrap/local/oidc/
