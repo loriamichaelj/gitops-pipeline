@@ -20,22 +20,122 @@ locals {
   aws_enabled   = var.aws_enabled
   azure_enabled = var.azure_subscription_id != null
 
-  # One IAM role per provider family, as for GCP. The managed policies are the broad
-  # service policies; narrow them with an inline policy once the resources are known.
+  # One IAM role per provider family, as for GCP. Resources are named
+  # infra-<env>-<name>-<hash> (the XR namespace is infra-<env>) and tagged
+  # repo=gitops-pipeline, so each policy covers only those.
+  aws_repo_tag = "gitops-pipeline"
   aws_workloads = {
     "provider-aws-s3" = {
-      role_name   = "xp-aws-s3-${var.env}"
-      policy_arns = ["arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+      role_name = "xp-aws-s3-${var.env}"
+      inline_policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+          {
+            Sid    = "Buckets"
+            Effect = "Allow"
+            Action = [
+              "s3:CreateBucket",
+              "s3:DeleteBucket",
+              "s3:ListBucket",
+              "s3:ListBucketVersions",
+              "s3:GetBucket*",
+              "s3:Get*Configuration",
+              "s3:PutBucketTagging",
+              "s3:PutBucketVersioning",
+              "s3:PutBucketPublicAccessBlock",
+            ]
+            Resource = "arn:aws:s3:::infra-*"
+          },
+          {
+            # forceDestroy empties a bucket before deleting it.
+            Sid      = "EmptyBuckets"
+            Effect   = "Allow"
+            Action   = ["s3:DeleteObject", "s3:DeleteObjectVersion"]
+            Resource = "arn:aws:s3:::infra-*/*"
+          },
+        ]
+      })
     }
     "provider-aws-ec2" = {
-      role_name   = "xp-aws-ec2-${var.env}"
-      policy_arns = ["arn:aws:iam::aws:policy/AmazonVPCFullAccess"]
+      role_name = "xp-aws-ec2-${var.env}"
+      inline_policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+          {
+            Sid      = "Read"
+            Effect   = "Allow"
+            Action   = "ec2:Describe*"
+            Resource = "*"
+          },
+          {
+            Sid      = "CreateTagged"
+            Effect   = "Allow"
+            Action   = ["ec2:CreateVpc", "ec2:CreateSubnet"]
+            Resource = ["arn:aws:ec2:*:*:vpc/*", "arn:aws:ec2:*:*:subnet/*"]
+            Condition = {
+              StringEquals = { "aws:RequestTag/repo" = local.aws_repo_tag }
+            }
+          },
+          {
+            # A subnet is created inside a VPC that already exists, so the VPC has no request tag.
+            Sid      = "CreateSubnetInOurVpc"
+            Effect   = "Allow"
+            Action   = "ec2:CreateSubnet"
+            Resource = "arn:aws:ec2:*:*:vpc/*"
+            Condition = {
+              StringEquals = { "aws:ResourceTag/repo" = local.aws_repo_tag }
+            }
+          },
+          {
+            Sid      = "TagOnCreate"
+            Effect   = "Allow"
+            Action   = "ec2:CreateTags"
+            Resource = ["arn:aws:ec2:*:*:vpc/*", "arn:aws:ec2:*:*:subnet/*"]
+            Condition = {
+              StringEquals = {
+                "ec2:CreateAction"    = ["CreateVpc", "CreateSubnet"]
+                "aws:RequestTag/repo" = local.aws_repo_tag
+              }
+            }
+          },
+          {
+            Sid    = "ManageOurs"
+            Effect = "Allow"
+            Action = [
+              "ec2:CreateTags",
+              "ec2:DeleteTags",
+              "ec2:ModifyVpcAttribute",
+              "ec2:ModifySubnetAttribute",
+              "ec2:DeleteVpc",
+              "ec2:DeleteSubnet",
+            ]
+            Resource = ["arn:aws:ec2:*:*:vpc/*", "arn:aws:ec2:*:*:subnet/*"]
+            Condition = {
+              StringEquals = { "aws:ResourceTag/repo" = local.aws_repo_tag }
+            }
+          },
+        ]
+      })
     }
   }
 
   # Azure's ClusterProviderConfig holds one client ID, so the families share an
   # identity and each service account gets a federated credential on it.
   azure_service_accounts = ["provider-azure-storage", "provider-azure-network", "provider-azure-resources"]
+
+  # What the Azure Compositions create: resource groups, a storage account with a
+  # container, a virtual network with a subnet. Not Contributor.
+  azure_actions = [
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Resources/subscriptions/resourceGroups/write",
+    "Microsoft.Resources/subscriptions/resourceGroups/delete",
+    "Microsoft.Storage/storageAccounts/*",
+    "Microsoft.Storage/storageAccounts/blobServices/*",
+    "Microsoft.Network/virtualNetworks/*",
+    "Microsoft.Network/virtualNetworks/subnets/*",
+    "Microsoft.Network/register/action",
+    "Microsoft.Storage/register/action",
+  ]
 }
 
 check "issuer_for_aws_and_azure" {
@@ -95,6 +195,7 @@ module "azure_identity" {
   location         = var.azure_location
   issuer_url       = var.oidc_issuer_url
   service_accounts = local.azure_service_accounts
+  actions          = local.azure_actions
 }
 
 module "gcp_identity" {

@@ -106,6 +106,14 @@ resources:
    when the cloud is enabled. This switches on
    both the provider chart and the cloud's `infrastructure/<env>/<cloud>` folders.
 
+The AWS roles and the Azure custom role grant only what the Compositions create: S3
+actions on `infra-*` buckets, EC2 VPC and subnet actions on resources tagged
+`repo=gitops-pipeline`, and the resource group, storage and network actions on Azure.
+They were written from the Compositions and checked with `tofu validate`, not
+against a live account. If a provider call is denied on first use, add that action to
+`aws_workloads` or `azure_actions` in `bootstrap/local/main.tf` rather than widening to
+a managed full-access policy.
+
 Then add XRs under `infrastructure/<env>/<cloud>/` through a pull request to `dev`.
 
 `platform/argocd/root/values.yaml` already lists `gcp`, `aws` and `azure`. Listing

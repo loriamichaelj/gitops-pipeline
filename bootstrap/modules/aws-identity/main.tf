@@ -60,3 +60,11 @@ resource "aws_iam_role_policy_attachment" "workload" {
   role       = aws_iam_role.workload[each.value.ksa].name
   policy_arn = each.value.arn
 }
+
+resource "aws_iam_role_policy" "workload" {
+  for_each = { for ksa, w in var.workloads : ksa => w if w.inline_policy != null }
+
+  name   = "crossplane"
+  role   = aws_iam_role.workload[each.key].id
+  policy = each.value.inline_policy
+}
