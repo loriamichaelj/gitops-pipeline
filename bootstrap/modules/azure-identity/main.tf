@@ -28,6 +28,27 @@ resource "azurerm_federated_identity_credential" "hub" {
   audience            = [var.audience]
 }
 
+# Least privilege: only what the Compositions create, not Contributor.
+resource "azurerm_role_definition" "hub" {
+  name        = "${var.identity_name}-crossplane"
+  scope       = "/subscriptions/${var.subscription_id}"
+  description = "What the gitops-pipeline Crossplane providers need on this subscription."
+
+  permissions {
+    actions     = var.actions
+    not_actions = []
+  }
+
+  assignable_scopes = ["/subscriptions/${var.subscription_id}"]
+}
+
+resource "azurerm_role_assignment" "custom" {
+  scope              = "/subscriptions/${var.subscription_id}"
+  role_definition_id = azurerm_role_definition.hub.role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.hub.principal_id
+  principal_type     = "ServicePrincipal"
+}
+
 resource "azurerm_role_assignment" "hub" {
   for_each = toset(var.roles)
 

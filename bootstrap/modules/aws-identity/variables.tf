@@ -18,10 +18,12 @@ variable "namespace" {
 variable "workloads" {
   description = <<-EOT
     One IAM role per Crossplane provider family, keyed by the provider's Kubernetes
-    service-account name. policy_arns are attached to the role.
+    service-account name. policy_arns are attached to the role; inline_policy is a
+    JSON policy document stored on it.
   EOT
   type = map(object({
-    role_name   = string
-    policy_arns = list(string)
+    role_name     = string
+    policy_arns   = optional(list(string), [])
+    inline_policy = optional(string)
   }))
 }

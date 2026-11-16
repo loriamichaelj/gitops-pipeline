@@ -41,8 +41,13 @@ variable "service_accounts" {
   type        = list(string)
 }
 
-variable "roles" {
-  description = "Roles on the subscription. Contributor is needed to create resource groups; it cannot grant access."
+variable "actions" {
+  description = "Management-plane actions the identity may perform on the subscription, as one custom role. It grants no role-assignment or policy rights."
   type        = list(string)
-  default     = ["Contributor"]
+}
+
+variable "roles" {
+  description = "Extra built-in roles to assign on the subscription. Empty by default: the custom role is enough."
+  type        = list(string)
+  default     = []
 }
