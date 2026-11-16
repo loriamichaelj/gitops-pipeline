@@ -74,7 +74,7 @@ spec:
 | `infrastructure/<env>/<cloud>/` | The XRs the hub reconciles (none checked in; see [infrastructure/README.md](infrastructure/README.md)) |
 | `platform/apis/` | XRDs and per-cloud Compositions |
 | `platform/argocd/root/` | App-of-apps Helm chart: pinned chart versions, environments, clouds |
-| `platform/crossplane/` | Crossplane install values, composition functions, GCP provider chart, AWS and Azure packages for schema checks only |
+| `platform/crossplane/` | Crossplane install values, composition functions, GCP and AWS provider charts, Azure package for schema checks only |
 | `platform/policies/` | Kyverno policies for what may live in `infrastructure/` |
 | `bootstrap/local/` | OpenTofu: kind hub, Argo CD, GCP workload identity for the providers |
 | `bootstrap/seed/` | OpenTofu: state bucket and GitHub OIDC identities ([README](bootstrap/seed/README.md)) |

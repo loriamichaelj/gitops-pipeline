@@ -1,0 +1,49 @@
+{{- /*
+Federated identity without Secrets:
+  - the provider pod runs as a fixed service account, provider-aws-<family>,
+  - a projected token for that account (audience = the IAM OIDC provider's client ID)
+    is exchanged by AWS STS (AssumeRoleWithWebIdentity),
+  - AWS_ROLE_ARN and AWS_WEB_IDENTITY_TOKEN_FILE point the SDK at the family's role.
+The ClusterProviderConfig uses IRSA, so the provider reads those variables.
+*/ -}}
+{{- range $family, $cfg := .Values.families }}
+{{- /* A family with no identity yet is skipped; see providers.yaml. */ -}}
+{{- if $cfg.roleARN }}
+{{- $name := printf "provider-aws-%s" $family }}
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: {{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: {{ $name }}
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              env:
+                - name: AWS_ROLE_ARN
+                  value: {{ $cfg.roleARN | quote }}
+                - name: AWS_WEB_IDENTITY_TOKEN_FILE
+                  value: /var/run/secrets/aws/token
+              volumeMounts:
+                - name: aws-token
+                  mountPath: /var/run/secrets/aws
+                  readOnly: true
+          volumes:
+            - name: aws-token
+              projected:
+                sources:
+                  - serviceAccountToken:
+                      audience: {{ $.Values.audience }}
+                      path: token
+                      expirationSeconds: 3600
+{{- end }}
+{{- end }}

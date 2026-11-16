@@ -1,0 +1,28 @@
+{{- /*
+The family provider owns the ProviderConfig CRDs. Declaring it explicitly pins its
+version; Crossplane would otherwise install it as an unpinned dependency.
+*/ -}}
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: upbound-provider-family-aws
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  package: {{ .Values.registry }}/provider-family-aws:{{ .Values.version }}
+{{- range $family, $cfg := .Values.families }}
+{{- /* A family with no identity yet is skipped, so a hub can sync a new family before bootstrap provisions its role. */ -}}
+{{- if $cfg.roleARN }}
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: upbound-provider-aws-{{ $family }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  package: {{ $.Values.registry }}/provider-aws-{{ $family }}:{{ $.Values.version }}
+  runtimeConfigRef:
+    name: provider-aws-{{ $family }}
+{{- end }}
+{{- end }}

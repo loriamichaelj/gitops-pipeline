@@ -65,7 +65,7 @@ it is missing, which is what a hub without that cloud's identity sees:
 | AWS | `aws` | `accountID` |
 | Azure | `azure` | `subscriptionID` |
 
-Only GCP's is rendered on a hub today (`platform/crossplane/providers/gcp`).
+GCP's and AWS's are rendered by their provider charts (`platform/crossplane/providers/gcp`, `.../aws`) on a hub labelled for that cloud. Azure's is not rendered yet.
 
 ## Status
 
@@ -76,24 +76,33 @@ The Compositions for all three clouds are written and tested. Only GCP can deplo
 | Compositions | yes | yes | yes |
 | Snapshot and error tests | yes | yes | yes |
 | Checked against provider CRDs | yes | yes | yes |
-| Provider installed on the hub | yes | no | no |
-| Hub identity and EnvironmentConfig | yes | no | no |
+| Provider chart and ApplicationSet | yes | yes | no |
+| Hub identity (bootstrap) | yes | no | no |
 
-AWS and Azure are checked against the real provider schemas through
-`platform/crossplane/schema-packages/`, which `scripts/validate-schemas.sh` loads.
-Nothing installs those packages on a hub.
+AWS is checked against the schemas of the providers its chart installs. Azure is
+checked against `platform/crossplane/schema-packages/`, which
+`scripts/validate-schemas.sh` loads; nothing installs those packages on a hub.
+No hub is labelled `aws-identity=federated`, so the AWS chart syncs nowhere.
 
 ## Enabling a cloud on a hub
 
-Nothing here deploys. To let a hub create AWS or Azure resources:
+Nothing here deploys. A hub needs three things before it can create AWS or Azure
+resources:
 
-1. Install the cloud's providers on the hub with their identity wiring, as
-   `platform/crossplane/providers/gcp` does for GCP (one provider per family, each
-   with its own cloud identity, no stored keys), using the versions pinned in
+1. **Provider chart**: AWS has one (`platform/crossplane/providers/aws`, one provider
+   per family, each assuming its own IAM role through a projected token, no stored
+   keys). Azure needs one written the same way, with the versions pinned in
    `platform/crossplane/schema-packages/`.
-2. Render the cloud's `EnvironmentConfig` from the hub's cluster Secret.
-3. Label the hub's cluster Secret `<cloud>-identity=federated`.
-4. Add XRs under `infrastructure/<env>/<cloud>/` through a pull request to `dev`.
+2. **Identity at bootstrap**: the cloud must trust the hub's service-account issuer
+   and hold one role (or identity) per family. The chart reads its facts from the
+   hub's cluster Secret annotations (`aws.gitops-pipeline/account-id`, `/audience`,
+   `/role.provider-aws-s3`, `/role.provider-aws-ec2`). AWS and Azure fetch the
+   issuer's discovery document and keys over public HTTPS, unlike GCP, which accepts
+   an uploaded copy, so a kind hub needs its issuer published somewhere public first.
+3. **Label** the hub's cluster Secret `<cloud>-identity=federated`. This switches on
+   both the provider chart and the cloud's `infrastructure/<env>/<cloud>` folders.
+
+Then add XRs under `infrastructure/<env>/<cloud>/` through a pull request to `dev`.
 
 `platform/argocd/root/values.yaml` already lists `gcp`, `aws` and `azure`. Listing
 a cloud creates nothing: an Application exists only for a folder that is checked in

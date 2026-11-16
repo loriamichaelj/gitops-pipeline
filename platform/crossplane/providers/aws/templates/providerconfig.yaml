@@ -1,0 +1,13 @@
+{{- /*
+Default config for namespaced (*.aws.m.upbound.io) managed resources. Credentials
+come from each provider pod's environment (see runtimeconfigs.yaml).
+*/ -}}
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  credentials:
+    source: IRSA

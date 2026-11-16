@@ -1,0 +1,20 @@
+# Environment facts (accountID, families.*.roleARN) are injected by the
+# crossplane-providers-aws ApplicationSet from the hub's Argo CD cluster Secret.
+# Defaults are empty on purpose.
+
+registry: xpkg.upbound.io/upbound
+# Keep in step with platform/crossplane/schema-packages/aws.yaml.
+version: v2.9.4
+
+accountID: ""
+# Audience the projected service-account token carries; must be a client ID (audience)
+# of the IAM OIDC provider for the hub's issuer.
+audience: sts.amazonaws.com
+
+# One provider per family. Each runs as Kubernetes service account
+# provider-aws-<family> and assumes its own IAM role.
+families:
+  s3:
+    roleARN: ""
+  ec2:
+    roleARN: ""
