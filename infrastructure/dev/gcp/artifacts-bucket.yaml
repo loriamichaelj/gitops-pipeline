@@ -12,5 +12,6 @@ spec:
         cloud: gcp
   parameters:
     location: US-CENTRAL1
+    versioning: true
     deletionPolicy: Orphan
     owner: platform
